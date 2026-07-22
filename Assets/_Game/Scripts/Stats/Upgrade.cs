@@ -1,8 +1,10 @@
+using System;
 using NekoLab.Stats;
 using UnityEngine;
 
 namespace CraneMachine
 {
+    [Serializable]
     public abstract class Upgrade : IUpgrade
     {
         protected abstract string Name { get; }

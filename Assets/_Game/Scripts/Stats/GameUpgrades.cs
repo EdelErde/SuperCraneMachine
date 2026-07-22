@@ -23,17 +23,28 @@ namespace CraneMachine
     {
         protected override string Name => "Stronger Grip";
         protected override int BaseCost => 20;
+        protected override int MaxPurchases => 8;
+
         protected override void ApplyEffect() =>
             Game(GameStat.GrabStrength).AddModifier(new StatModifier(25f, StatModifierEffect.Add));
     }
 
     public class FasterRainUpgrade : Upgrade
     {
+        protected override string Name => "Faster Items";
+        protected override int BaseCost => 20;
+        protected override int MaxPurchases => 9;
+        protected override void ApplyEffect() =>
+            Game(GameStat.SpawnInterval).AddModifier(new StatModifier(-0.3f, StatModifierEffect.Add));
+    }
+    
+    public class MoreItemsUpgrade : Upgrade
+    {
         protected override string Name => "More Items";
         protected override int BaseCost => 20;
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
-            Game(GameStat.SpawnInterval).AddModifier(new StatModifier(-0.05f, StatModifierEffect.Add));
+            Game(GameStat.MaxLiveItems).AddModifier(new StatModifier(2, StatModifierEffect.Add));
     }
     
     public class DiamondValueUpgrade : Upgrade

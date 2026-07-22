@@ -8,6 +8,9 @@ namespace CraneMachine
         GrabStrength,
         SpawnInterval,
         MaxLiveItems,
+        HandStrength,
+        DragCount,
+        DragRadius,
     }
 
     public enum ItemStat

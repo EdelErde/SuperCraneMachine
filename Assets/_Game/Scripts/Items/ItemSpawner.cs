@@ -9,20 +9,20 @@ namespace CraneMachine
         [SerializeField] private BoxCollider2D spawnArea;
 
         [Header("Rain settings")]
-        [SerializeField] private float spawnInterval = 0.5f;
-        [SerializeField] private int itemsPerDrop = 1;
-        [SerializeField] private float intervalJitter = 0.15f;
-        [SerializeField] private int maxLiveItems = 40;
-        [SerializeField] private int initialBurst = 10;
-        [SerializeField] private bool spawnOnStart = true;
+        [SerializeField] private SpawnerConfig config = new SpawnerConfig();
 
         private float _timer;
         private readonly List<Item> _live = new List<Item>();
 
+        private int itemsPerDrop => config.itemsPerDrop;
+        private float intervalJitter => config.intervalJitter;
+        private int initialBurst => config.initialBurst;
+        private bool spawnOnStart => config.spawnOnStart;
+
         private float SpawnIntervalValue =>
-            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.SpawnInterval) : spawnInterval;
+            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.SpawnInterval) : config.spawnInterval;
         private int MaxLiveValue =>
-            ServiceLocator.StatService != null ? Mathf.RoundToInt(ServiceLocator.StatService.GameValue(GameStat.MaxLiveItems)) : maxLiveItems;
+            ServiceLocator.StatService != null ? Mathf.RoundToInt(ServiceLocator.StatService.GameValue(GameStat.MaxLiveItems)) : config.maxLiveItems;
 
         private void Awake() => ServiceLocator.ItemSpawner = this;
 

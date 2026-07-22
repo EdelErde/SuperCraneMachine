@@ -5,15 +5,15 @@ namespace CraneMachine
     [RequireComponent(typeof(HingeJoint))]
     public class ClawProng : MonoBehaviour
     {
-        [SerializeField] private float openAngle = 40f;
-        [SerializeField] private float closedAngle = 0f;
-        [SerializeField] private float motorForce = 100f;
-        [SerializeField] private float motorSpeed = 200f;
+        [SerializeField] private ProngConfig config = new ProngConfig();
 
         private HingeJoint _hinge;
 
+        private float openAngle => config.openAngle;
+        private float closedAngle => config.closedAngle;
+
         private float Force =>
-            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.GrabStrength) : motorForce;
+            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.GrabStrength) : config.motorForce;
 
         private void Awake() => _hinge = GetComponent<HingeJoint>();
 

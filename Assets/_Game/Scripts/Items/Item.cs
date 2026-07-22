@@ -8,10 +8,10 @@ namespace CraneMachine
         [SerializeReference] public ItemType type = new RubberDuck();
 
         [Header("Drag feel")]
-        [Tooltip("How strongly the item is pulled toward the pointer.")]
-        [SerializeField] private float dragForce = 60f;
-        [Tooltip("Higher = less overshoot/wobble while dragging.")]
-        [SerializeField] private float dragDamping = 8f;
+        [SerializeField] private DragConfig config = new DragConfig();
+
+        private float dragForce => config.dragForce;
+        private float dragDamping => config.dragDamping;
 
         public int SellValue => type != null ? type.SellValue : 0;
         public float Mass => type != null ? type.Mass : 1f;
@@ -22,6 +22,10 @@ namespace CraneMachine
 
         public Transform Transform => transform;
         public bool CanDrag => true;
+        public bool IsDragging => _dragging;
+
+        private static float HandStrength =>
+            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.HandStrength) : 5f;
 
         private void Awake() => _rb = GetComponent<Rigidbody2D>();
 
@@ -31,15 +35,34 @@ namespace CraneMachine
                 _rb.mass = type.Mass;
         }
 
-        public void OnDragBegin() => _dragging = true;
+        public void OnDragBegin()
+        {
+            _dragging = true;
+        }
 
         public void OnDrag(Vector2 worldPoint) => _target = worldPoint;
 
         public void OnDragEnd() => _dragging = false;
 
+        public float Strain { get; private set; }
+
         private void FixedUpdate()
         {
             if (!_dragging) return;
+
+            float distance = (_target - _rb.position).magnitude;
+
+            float maxDistance = HandStrength / Mathf.Max(0.01f, Mass);
+
+            float instantStrain = Mathf.Clamp01(distance / Mathf.Max(0.01f, maxDistance));
+            Strain = Mathf.Lerp(Strain, instantStrain, 0.35f);
+
+            if (distance > maxDistance)
+            {
+                _dragging = false;
+                Strain = 0f;
+                return;
+            }
 
             Vector2 toTarget = _target - _rb.position;
             Vector2 force = toTarget * dragForce - _rb.linearVelocity * dragDamping;

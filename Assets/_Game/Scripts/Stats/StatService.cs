@@ -38,8 +38,11 @@ namespace CraneMachine
             _game.RegisterStat(GameStat.ClawSweepSpeed, 2.5f);
             _game.RegisterStat(GameStat.ClawVerticalSpeed, 3f);
             _game.RegisterStat(GameStat.GrabStrength, 100f);
-            _game.RegisterStat(GameStat.SpawnInterval, 0.5f);
-            _game.RegisterStat(GameStat.MaxLiveItems, 40f);
+            _game.RegisterStat(GameStat.SpawnInterval, 2.5f);
+            _game.RegisterStat(GameStat.MaxLiveItems, 12f);
+            _game.RegisterStat(GameStat.HandStrength, .5f);
+            _game.RegisterStat(GameStat.DragCount, 1f);
+            _game.RegisterStat(GameStat.DragRadius, 0.75f);
         }
 
         private void RegisterItemStats()

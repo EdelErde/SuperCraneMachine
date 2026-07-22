@@ -10,33 +10,26 @@ namespace CraneMachine
         [SerializeField] private Transform clawBody;
         [SerializeField] private ClawProng[] prongs;
 
-        [Header("Horizontal sweep")]
-        [SerializeField] private float minX = -6f;
-        [SerializeField] private float maxX = 3.2f;
-        [SerializeField] private float sweepSpeed = 2.5f;
-
-        [Header("Vertical")]
-        [SerializeField] private float topY = 4f;
-        [SerializeField] private float bottomY = 0.5f;
-        [SerializeField] private float verticalSpeed = 3f;
-
-        [Header("Drop")]
-        [SerializeField] private float dropX = 5.2f;
-
-        [Header("Timing")]
-        [SerializeField] private float grabHold = 0.4f;
-        [SerializeField] private float dropHold = 0.5f;
+        [Header("Tuning")]
+        [SerializeField] private ClawConfig config = new ClawConfig();
 
         public State Current { get; private set; } = State.Sweeping;
 
         private int _sweepDir = 1;
         private float _timer;
 
-        // Live values from the stat system (fall back to serialized if service missing).
+        private float minX => config.minX;
+        private float maxX => config.maxX;
+        private float topY => config.topY;
+        private float bottomY => config.bottomY;
+        private float dropX => config.dropX;
+        private float grabHold => config.grabHold;
+        private float dropHold => config.dropHold;
+
         private float SweepSpeed =>
-            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.ClawSweepSpeed) : sweepSpeed;
+            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.ClawSweepSpeed) : config.sweepSpeed;
         private float VerticalSpeed =>
-            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.ClawVerticalSpeed) : verticalSpeed;
+            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.ClawVerticalSpeed) : config.verticalSpeed;
 
         private void Awake() => ServiceLocator.Claw = this;
 
@@ -97,11 +90,10 @@ namespace CraneMachine
 
         private void Return()
         {
-            float center = (minX + maxX) * 0.5f;
-            MoveTowardX(center);
-            if (Mathf.Abs(clawBody.localPosition.x - center) < 0.05f)
+            MoveTowardX(maxX);
+            if (Mathf.Abs(clawBody.localPosition.x - maxX) < 0.05f)
             {
-                _sweepDir = 1;
+                _sweepDir = -1;
                 Current = State.Sweeping;
             }
         }

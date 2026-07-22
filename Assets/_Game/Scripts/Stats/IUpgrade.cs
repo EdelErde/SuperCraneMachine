@@ -5,6 +5,7 @@ namespace CraneMachine
         int CurrentCost { get; }
         bool MaxedOut { get; }
         string Label { get; }
+        int TimesPurchased { get; }
         void Apply();
     }
 }
