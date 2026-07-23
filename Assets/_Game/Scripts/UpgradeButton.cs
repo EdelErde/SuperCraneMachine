@@ -19,8 +19,25 @@ namespace CraneMachine
         [Header("UI")]
         [SerializeField] private TextMeshProUGUI label;
         [SerializeField] private TextMeshProUGUI costLabel;
+        [SerializeField] private Image icon;
         [SerializeField] private Color affordableColor = Color.white;
         [SerializeField] private Color unaffordableColor = new Color(0.5f, 0.5f, 0.5f);
+
+        public IUpgrade Upgrade => upgrade;
+
+        public void ApplyStaticVisuals()
+        {
+            if (upgrade == null) return;
+
+            if (label != null) label.text = upgrade.DisplayName;
+            if (costLabel != null) costLabel.text = $"${upgrade.CurrentCost}";
+
+            if (icon != null && !string.IsNullOrEmpty(upgrade.IconPath))
+            {
+                var sprite = Resources.Load<Sprite>(upgrade.IconPath);
+                if (sprite != null) icon.sprite = sprite;
+            }
+        }
 
         private Button _button;
 
@@ -53,7 +70,7 @@ namespace CraneMachine
 
         private void OnMoneyChanged(int _) => Refresh();
 
-        private bool Unlocked =>
+        public bool Unlocked =>
             unlockedBy == null ||
             (ServiceLocator.UpgradeService != null &&
              ServiceLocator.UpgradeService.TimesPurchased(unlockedBy.GetType()) >= requiredLevel);

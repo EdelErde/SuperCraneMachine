@@ -11,6 +11,12 @@ namespace CraneMachine
         [SerializeField] private Camera cam;
         [SerializeField] private LayerMask interactableMask = ~0;
 
+        [Header("Carry formation")]
+        [Tooltip("Ring radius as a fraction of the pickup radius.")]
+        [SerializeField] private float ringRadiusScale = 0.6f;
+        [Tooltip("Angle of the first slot, in degrees.")]
+        [SerializeField] private float ringStartAngle = 90f;
+
         private readonly List<IDraggable> _held = new List<IDraggable>();
         private readonly List<IDraggable> _candidates = new List<IDraggable>();
         private readonly Collider2D[] _hits = new Collider2D[32];
@@ -33,31 +39,51 @@ namespace CraneMachine
             Vector2 pointer = PointerWorld();
             PointerWorldPosition = pointer;
 
-            if (PressedThisFrame())
+            if (ReleasedThisFrame())
+            {
+                ReleaseAll();
+                UpdateCursor(pointer);
+                return;
+            }
+
+            if (IsHeld())
                 Pick(pointer);
 
             if (_held.Count > 0)
             {
-                if (ReleasedThisFrame())
+                for (int i = _held.Count - 1; i >= 0; i--)
                 {
-                    ReleaseAll();
+                    var d = _held[i];
+                    if (d.Transform == null || !d.IsDragging)
+                        _held.RemoveAt(i);
                 }
-                else
-                {
-                    for (int i = _held.Count - 1; i >= 0; i--)
-                    {
-                        var d = _held[i];
-                        if (d.Transform == null || !d.IsDragging)   // destroyed or slipped
-                        {
-                            _held.RemoveAt(i);
-                            continue;
-                        }
-                        d.OnDrag(pointer);
-                    }
-                }
+
+                AssignRingSlots(pointer);
             }
 
             UpdateCursor(pointer);
+        }
+
+        private void AssignRingSlots(Vector2 center)
+        {
+            int n = _held.Count;
+            if (n == 0) return;
+
+            if (n == 1)
+            {
+                _held[0].OnDrag(center);
+                return;
+            }
+
+            float radius = Mathf.Max(0.05f, DragRadius) * ringRadiusScale;
+            float step = Mathf.PI * 2f / n;
+
+            for (int i = 0; i < n; i++)
+            {
+                float angle = ringStartAngle * Mathf.Deg2Rad + step * i;
+                Vector2 slot = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                _held[i].OnDrag(slot);
+            }
         }
 
         private void UpdateCursor(Vector2 pointer)
@@ -70,27 +96,37 @@ namespace CraneMachine
                 return;
             }
 
-            var hit = Physics2D.OverlapPoint(pointer, interactableMask);
-            bool overDraggable = hit != null && hit.GetComponentInParent<IDraggable>() is { CanDrag: true };
-            ServiceLocator.CursorManager.Set(overDraggable ? CursorState.Hover : CursorState.Default);
+            float radius = Mathf.Max(0.05f, DragRadius);
+            int count = Physics2D.OverlapCircle(
+                pointer, radius,
+                new ContactFilter2D { useLayerMask = true, layerMask = interactableMask, useTriggers = false },
+                _hits);
+
+            bool inRange = false;
+            for (int i = 0; i < count; i++)
+            {
+                var d = _hits[i].GetComponentInParent<IDraggable>();
+                if (d != null && d.CanDrag) { inRange = true; break; }
+            }
+
+            ServiceLocator.CursorManager.Set(inRange ? CursorState.Hover : CursorState.Default);
         }
 
         private Vector2 _lastPickPoint;
 
         private void Pick(Vector2 worldPoint)
         {
+            int cap = Mathf.Max(1, DragCount);
+            if (_held.Count >= cap) return;
+
             _lastPickPoint = worldPoint;
 
-            float radius = Mathf.Max(0.05f, DragRadius);   // never zero -> avoids pixel-precise clicking
+            float radius = Mathf.Max(0.05f, DragRadius);
             int count = Physics2D.OverlapCircle(
                 worldPoint, radius,
                 new ContactFilter2D { useLayerMask = true, layerMask = interactableMask, useTriggers = false },
                 _hits);
 
-            int cap = Mathf.Max(1, DragCount);
-
-            // Collect valid draggables, sorted by distance to the click so the
-            // nearest item is grabbed first (feels precise but forgiving).
             _candidates.Clear();
             for (int i = 0; i < count; i++)
             {
@@ -105,7 +141,7 @@ namespace CraneMachine
 
             for (int i = 0; i < _candidates.Count && _held.Count < cap; i++)
             {
-                _candidates[i].OnDragBegin();
+                _candidates[i].OnDragBegin(worldPoint);
                 _held.Add(_candidates[i]);
             }
         }
@@ -133,11 +169,14 @@ namespace CraneMachine
             Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
         private static bool ReleasedThisFrame() =>
             Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
+        private static bool IsHeld() =>
+            Mouse.current != null && Mouse.current.leftButton.isPressed;
         private static Vector3 PointerScreen() =>
             Mouse.current != null ? (Vector3)Mouse.current.position.ReadValue() : Vector3.zero;
 #else
         private static bool PressedThisFrame() => Input.GetMouseButtonDown(0);
         private static bool ReleasedThisFrame() => Input.GetMouseButtonUp(0);
+        private static bool IsHeld() => Input.GetMouseButton(0);
         private static Vector3 PointerScreen() => Input.mousePosition;
 #endif
     }

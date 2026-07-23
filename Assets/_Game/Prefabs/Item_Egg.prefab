@@ -135,15 +135,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.Item
   type:
-    rid: 3807271745840480331
+    rid: 3807271745840480403
   config:
     dragForce: 30
     dragDamping: 6
   references:
     version: 2
     RefIds:
-    - rid: 3807271745840480331
-      type: {class: RubberDuck, ns: CraneMachine, asm: Assembly-CSharp}
+    - rid: 3807271745840480403
+      type: {class: Egg, ns: CraneMachine, asm: Assembly-CSharp}
       data: 
 --- !u!58 &3087568818455658491
 CircleCollider2D:

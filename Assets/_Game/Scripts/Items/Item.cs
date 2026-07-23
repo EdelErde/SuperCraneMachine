@@ -5,7 +5,7 @@ namespace CraneMachine
     [RequireComponent(typeof(Rigidbody2D))]
     public class Item : MonoBehaviour, IDraggable
     {
-        [SerializeReference] public ItemType type = new RubberDuck();
+        [SerializeReference] public ItemType type = new Egg();
 
         [Header("Drag feel")]
         [SerializeField] private DragConfig config = new DragConfig();
@@ -19,10 +19,20 @@ namespace CraneMachine
         private Rigidbody2D _rb;
         private bool _dragging;
         private Vector2 _target;
+        private Vector2 _grabOffset;
+        private float _settleT;
+
+        [Tooltip("Seconds for the item to ease from where it was grabbed into its slot.")]
+        [SerializeField] private float settleTime = 0.25f;
 
         public Transform Transform => transform;
-        public bool CanDrag => true;
+        public bool CanDrag => Time.time >= _regrabTime;
         public bool IsDragging => _dragging;
+
+        [Tooltip("Seconds before a slipped item can be grabbed again.")]
+        [SerializeField] private float regrabCooldown = 0.4f;
+
+        private float _regrabTime;
 
         private static float HandStrength =>
             ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.HandStrength) : 5f;
@@ -35,12 +45,17 @@ namespace CraneMachine
                 _rb.mass = type.Mass;
         }
 
-        public void OnDragBegin()
+        public void OnDragBegin(Vector2 worldPoint)
         {
             _dragging = true;
+            _target = worldPoint;
+
+            _grabOffset = _rb.position - worldPoint;
+            _settleT = 0f;
+            Strain = 0f;
         }
 
-        public void OnDrag(Vector2 worldPoint) => _target = worldPoint;
+        public void OnDrag(Vector2 slotPosition) => _target = slotPosition;
 
         public void OnDragEnd() => _dragging = false;
 
@@ -50,7 +65,12 @@ namespace CraneMachine
         {
             if (!_dragging) return;
 
-            float distance = (_target - _rb.position).magnitude;
+            _settleT = Mathf.Min(1f, _settleT + Time.fixedDeltaTime / Mathf.Max(0.01f, settleTime));
+            Vector2 offset = Vector2.Lerp(_grabOffset, Vector2.zero, _settleT);
+
+            Vector2 desired = _target + offset;
+
+            float distance = (desired - _rb.position).magnitude;
 
             float maxDistance = HandStrength / Mathf.Max(0.01f, Mass);
 
@@ -61,10 +81,11 @@ namespace CraneMachine
             {
                 _dragging = false;
                 Strain = 0f;
+                _regrabTime = Time.time + regrabCooldown;
                 return;
             }
 
-            Vector2 toTarget = _target - _rb.position;
+            Vector2 toTarget = desired - _rb.position;
             Vector2 force = toTarget * dragForce - _rb.linearVelocity * dragDamping;
             _rb.AddForce(force);
         }

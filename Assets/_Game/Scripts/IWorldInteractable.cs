@@ -12,8 +12,8 @@ namespace CraneMachine
         bool CanDrag { get; }
         bool IsDragging { get; }
         float Strain { get; }
-        void OnDragBegin();
-        void OnDrag(Vector2 worldPoint);
+        void OnDragBegin(Vector2 worldPoint);
+        void OnDrag(Vector2 slotPosition);
         void OnDragEnd();
     }
 }

@@ -9,6 +9,7 @@ namespace CraneMachine
     public class StatService : MonoBehaviour
     {
         public event Action<int> OnMoneyChanged;
+        public event Action<int> OnMoneyEarned;
 
         private int _money;
         public int CurrentMoney => _money;
@@ -40,7 +41,7 @@ namespace CraneMachine
             _game.RegisterStat(GameStat.GrabStrength, 100f);
             _game.RegisterStat(GameStat.SpawnInterval, 2.5f);
             _game.RegisterStat(GameStat.MaxLiveItems, 12f);
-            _game.RegisterStat(GameStat.HandStrength, .5f);
+            _game.RegisterStat(GameStat.HandStrength, .3f);
             _game.RegisterStat(GameStat.DragCount, 1f);
             _game.RegisterStat(GameStat.DragRadius, 0.75f);
         }
@@ -57,6 +58,7 @@ namespace CraneMachine
                 var container = new StatContainer<ItemStat>();
                 container.RegisterStat(ItemStat.SellValue, proto.BaseSellValue);
                 container.RegisterStat(ItemStat.Mass, proto.BaseMass);
+                container.RegisterStat(ItemStat.Unlocked, proto.StartsUnlocked ? 1f : 0f);
                 _items[t] = container;
             }
         }
@@ -71,6 +73,7 @@ namespace CraneMachine
         {
             if (amount <= 0) return;
             _money += amount;
+            OnMoneyEarned?.Invoke(amount);
             OnMoneyChanged?.Invoke(_money);
         }
 

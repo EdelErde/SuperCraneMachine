@@ -70,6 +70,17 @@ namespace CraneMachine
             return _live.Count >= MaxLiveValue;
         }
 
+        public int LiveCount
+        {
+            get
+            {
+                _live.RemoveAll(i => i == null);
+                return _live.Count;
+            }
+        }
+
+        public int MaxCount => MaxLiveValue;
+
         private float NextInterval()
         {
             return Mathf.Max(0.01f, SpawnIntervalValue + Random.Range(-intervalJitter, intervalJitter));

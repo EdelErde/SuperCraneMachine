@@ -10,7 +10,11 @@ namespace CraneMachine
         protected abstract string Name { get; }
         protected abstract int BaseCost { get; }
         protected virtual float CostMultiplier => 1.5f;
-        protected virtual int MaxPurchases => 0;
+        protected virtual int MaxPurchases => 0; 
+        protected virtual string Icon => null;
+
+        public string DisplayName => Name;
+        public string IconPath => Icon;
 
         protected abstract void ApplyEffect();
 

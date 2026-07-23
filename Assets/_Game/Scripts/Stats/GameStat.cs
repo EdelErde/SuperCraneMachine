@@ -17,5 +17,6 @@ namespace CraneMachine
     {
         SellValue,
         Mass,
+        Unlocked,
     }
 }

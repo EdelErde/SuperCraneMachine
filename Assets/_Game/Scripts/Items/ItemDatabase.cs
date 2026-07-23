@@ -34,6 +34,7 @@ namespace CraneMachine
             if (prefab == null) return 0f;
             var item = prefab.GetComponent<Item>();
             if (item == null || item.type == null) return 0f;
+            if (!item.type.Unlocked) return 0f;
             return Mathf.Max(0f, item.type.SpawnWeight);
         }
 
