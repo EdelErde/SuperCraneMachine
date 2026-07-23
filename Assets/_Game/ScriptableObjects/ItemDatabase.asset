@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.ItemDatabase
   prefabs:
   - {fileID: 676983462849980093, guid: dc82fdafcd7c79f489af6baf30ddbedb, type: 3}
+  - {fileID: 6923259204036142997, guid: 09d5a56a9dd9cad4f96e3dfc51c10805, type: 3}
