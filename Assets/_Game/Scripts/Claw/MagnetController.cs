@@ -12,6 +12,9 @@ namespace CraneMachine
         [SerializeField] private Transform magnetBody;
         [Tooltip("Bottom face of the magnet. The square pickup zone hangs straight down from here.")]
         [SerializeField] private Transform magnetTip;
+        [Tooltip("The magnet's visual (sprite). Its X scale is stretched to match MagnetRange. " +
+                 "Leave empty to skip visual scaling.")]
+        [SerializeField] private Transform magnetVisual;
 
         [Header("Grabbing")]
         [Tooltip("Rigidbody2D on the magnet that caught items attach to.")]
@@ -71,7 +74,11 @@ namespace CraneMachine
 
         private void Awake() => ServiceLocator.Magnet = this;
 
-        private void Update()
+        // Visual-only work stays on the render frame.
+        private void Update() => SyncVisualWidth();
+
+        // Movement runs in physics so the FixedJoint2D drags carried items along.
+        private void FixedUpdate()
         {
             switch (Current)
             {
@@ -85,13 +92,25 @@ namespace CraneMachine
             }
         }
 
+        // Current magnet position. Body and rigidbody are the same root object,
+        // so rigidbody position == transform position == local position.
+        private Vector2 Pos =>
+            magnetRigidbody != null ? magnetRigidbody.position : (Vector2)magnetBody.localPosition;
+
+        // Move the magnet through physics so joints and carried items follow.
+        private void SetPos(Vector2 p)
+        {
+            if (magnetRigidbody != null) magnetRigidbody.MovePosition(p);
+            else magnetBody.localPosition = p;
+        }
+
         private void Sweep()
         {
             MoveX(_sweepDir);
-            if (magnetBody.localPosition.x >= maxX) _sweepDir = -1;
-            else if (magnetBody.localPosition.x <= minX) _sweepDir = 1;
+            if (Pos.x >= maxX) _sweepDir = -1;
+            else if (Pos.x <= minX) _sweepDir = 1;
 
-            if (MagnetInput.GrabPressed)
+            if (MagnetInput.ConsumeGrab())
             {
                 Current = State.Lowering;
                 return;
@@ -141,9 +160,9 @@ namespace CraneMachine
                 return;
             }
 
-            var p = magnetBody.localPosition;
-            p.y = Mathf.MoveTowards(p.y, bottomY, VerticalSpeed * Time.deltaTime);
-            magnetBody.localPosition = p;
+            var p = Pos;
+            p.y = Mathf.MoveTowards(p.y, bottomY, VerticalSpeed * Time.fixedDeltaTime);
+            SetPos(p);
 
             if (Mathf.Abs(p.y - bottomY) < 0.02f)
             {
@@ -167,22 +186,40 @@ namespace CraneMachine
             }
         }
 
-        // Center and half-extents of the downward square zone hanging from magnetTip.
-        private void GetBox(out Vector2 center, out Vector2 halfExtents)
+        // Stretch the magnet sprite's width so it visually matches the pickup range.
+        private void SyncVisualWidth()
+        {
+            if (magnetVisual == null) return;
+
+            float refWidth = Mathf.Max(0.01f, config.spriteReferenceWidth);
+            float scaleX = Mathf.Max(0.01f, MagnetRange) / refWidth;
+
+            var s = magnetVisual.localScale;
+            // Preserve sign (in case the sprite is flipped) and leave Y/Z alone.
+            s.x = Mathf.Sign(s.x == 0f ? 1f : s.x) * scaleX;
+            magnetVisual.localScale = s;
+        }
+
+        private float DetectionDepth => Mathf.Max(0.01f, config.detectionDepth);
+        private float PickupDepth => Mathf.Max(0.01f, config.pickupDepth);
+
+        // Center and half-extents of a downward box (MagnetRange wide, `depth` tall) hanging from magnetTip.
+        private void GetBox(float depth, out Vector2 center, out Vector2 halfExtents)
         {
             float side = Mathf.Max(0.01f, MagnetRange);
-            float depth = Mathf.Max(0.01f, config.magnetDepth);
+            depth = Mathf.Max(0.01f, depth);
             Vector2 tip = magnetTip != null ? (Vector2)magnetTip.position : (Vector2)transform.position;
 
-            // Square is `side` wide, `depth` tall, hanging straight down from the tip.
+            // Box top edge sits at the tip; it extends `depth` straight down.
             center = new Vector2(tip.x, tip.y - depth * 0.5f);
             halfExtents = new Vector2(side * 0.5f, depth * 0.5f);
         }
 
+        // Thin probe at the tip: is the magnet face touching an item?
         private bool BoxOverlapsItem()
         {
             if (magnetTip == null) return false;
-            GetBox(out var center, out var half);
+            GetBox(DetectionDepth, out var center, out var half);
 
             int found = Physics2D.OverlapBox(
                 center, half * 2f, 0f,
@@ -199,7 +236,8 @@ namespace CraneMachine
         private void MagnetizeItems()
         {
             if (magnetTip == null) return;
-            GetBox(out var center, out var half);
+            // Bigger pickup zone: grabs everything around the contact point, not just what triggered detection.
+            GetBox(PickupDepth, out var center, out var half);
 
             int capacity = Mathf.Max(1, Mathf.RoundToInt(StatOr(GameStat.MagnetGrabCapacity, 1f)));
 
@@ -258,7 +296,7 @@ namespace CraneMachine
         private void MoveToDrop()
         {
             MoveTowardX(dropX);
-            if (Mathf.Abs(magnetBody.localPosition.x - dropX) < 0.05f)
+            if (Mathf.Abs(Pos.x - dropX) < 0.05f)
                 Current = State.Dropping;
         }
 
@@ -277,7 +315,7 @@ namespace CraneMachine
         private void Return()
         {
             MoveTowardX(maxX);
-            if (Mathf.Abs(magnetBody.localPosition.x - maxX) < 0.05f)
+            if (Mathf.Abs(Pos.x - maxX) < 0.05f)
             {
                 _sweepDir = -1;
                 Current = State.Sweeping;
@@ -286,23 +324,23 @@ namespace CraneMachine
 
         private void MoveX(float dir)
         {
-            var p = magnetBody.localPosition;
-            p.x = Mathf.Clamp(p.x + dir * SweepSpeed * Time.deltaTime, minX, maxX);
-            magnetBody.localPosition = p;
+            var p = Pos;
+            p.x = Mathf.Clamp(p.x + dir * SweepSpeed * Time.fixedDeltaTime, minX, maxX);
+            SetPos(p);
         }
 
         private void MoveTowardX(float targetX)
         {
-            var p = magnetBody.localPosition;
-            p.x = Mathf.MoveTowards(p.x, targetX, SweepSpeed * Time.deltaTime);
-            magnetBody.localPosition = p;
+            var p = Pos;
+            p.x = Mathf.MoveTowards(p.x, targetX, SweepSpeed * Time.fixedDeltaTime);
+            SetPos(p);
         }
 
         private void MoveY(float targetY, State next)
         {
-            var p = magnetBody.localPosition;
-            p.y = Mathf.MoveTowards(p.y, targetY, VerticalSpeed * Time.deltaTime);
-            magnetBody.localPosition = p;
+            var p = Pos;
+            p.y = Mathf.MoveTowards(p.y, targetY, VerticalSpeed * Time.fixedDeltaTime);
+            SetPos(p);
             if (Mathf.Abs(p.y - targetY) < 0.02f) Current = next;
         }
 
@@ -310,11 +348,16 @@ namespace CraneMachine
         private void OnDrawGizmosSelected()
         {
             if (magnetTip == null) return;
-            GetBox(out var center, out var half);
+
+            GetBox(PickupDepth, out var pCenter, out var pHalf);
             Gizmos.color = Application.isPlaying && Current == State.Grabbing
                 ? new Color(0.3f, 1f, 0.4f, 0.9f)
-                : new Color(1f, 0.8f, 0.2f, 0.7f);
-            Gizmos.DrawWireCube(center, half * 2f);
+                : new Color(0.3f, 0.8f, 1f, 0.6f);
+            Gizmos.DrawWireCube(pCenter, pHalf * 2f);
+
+            GetBox(DetectionDepth, out var dCenter, out var dHalf);
+            Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.95f);
+            Gizmos.DrawWireCube(dCenter, dHalf * 2f);
         }
 #endif
     }

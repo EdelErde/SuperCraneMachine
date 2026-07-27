@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NekoLab.Stats;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace CraneMachine
@@ -75,6 +76,7 @@ namespace CraneMachine
         public Stat ItemStatOf(Type itemType, ItemStat prop) => _items[itemType].Get(prop);
         public float ItemValue(Type itemType, ItemStat prop) => _items[itemType].Get(prop).Value;
 
+        [Button]
         public void AddMoney(int amount)
         {
             if (amount <= 0) return;

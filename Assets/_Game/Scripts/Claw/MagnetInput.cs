@@ -7,7 +7,15 @@ namespace CraneMachine
 {
     public class MagnetInput : MonoBehaviour
     {
-        public static bool GrabPressed { get; private set; }
+        private static bool _grabQueued;
+        public static bool GrabPressed => _grabQueued;
+
+        public static bool ConsumeGrab()
+        {
+            if (!_grabQueued) return false;
+            _grabQueued = false;
+            return true;
+        }
 
         private void Update()
         {
@@ -17,7 +25,7 @@ namespace CraneMachine
 #else
             pressed = Input.GetKeyDown(KeyCode.Space);
 #endif
-            GrabPressed = pressed;
+            if (pressed) _grabQueued = true;
         }
     }
 }
