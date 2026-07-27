@@ -3,7 +3,7 @@ namespace CraneMachine
     public enum UnlockTarget
     {
         Conveyor,
-        Claw,
+        Magnet,
         AutoSeller,
     }
 }

@@ -36,17 +36,17 @@ namespace CraneMachine
         private void RegisterGameStats()
         {
             _game.RegisterStat(GameStat.MoneyMultiplier, 1f);
-            _game.RegisterStat(GameStat.ClawSweepSpeed, 2.5f);
-            _game.RegisterStat(GameStat.ClawVerticalSpeed, 3f);
-            _game.RegisterStat(GameStat.ClawGrabStrength, 0.35f);
-            _game.RegisterStat(GameStat.ClawGrabCapacity, 1f);
+            _game.RegisterStat(GameStat.MagnetSweepSpeed, 2.5f);
+            _game.RegisterStat(GameStat.MagnetVerticalSpeed, 3f);
+            _game.RegisterStat(GameStat.MagnetGrabCapacity, 1f);
+            _game.RegisterStat(GameStat.MagnetRange, 1.5f);
             _game.RegisterStat(GameStat.SpawnInterval, 2.5f);
             _game.RegisterStat(GameStat.MaxLiveItems, 4f);
             _game.RegisterStat(GameStat.HandStrength, .3f);
             _game.RegisterStat(GameStat.DragCount, 1f);
             _game.RegisterStat(GameStat.DragRadius, 0.75f);
-            _game.RegisterStat(GameStat.AutoClaw, 0f);
-            _game.RegisterStat(GameStat.AutoClawInterval, 8f);
+            _game.RegisterStat(GameStat.AutoMagnet, 0f);
+            _game.RegisterStat(GameStat.AutoMagnetInterval, 8f);
             _game.RegisterStat(GameStat.ConveyorSpeed, 2f);
             _game.RegisterStat(GameStat.ConveyorGrip, 12f);
         }

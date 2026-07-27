@@ -3,17 +3,17 @@ namespace CraneMachine
     public enum GameStat
     {
         MoneyMultiplier,   // multiplies all sell income
-        ClawSweepSpeed,
-        ClawVerticalSpeed,
-        ClawGrabStrength,      // chance (0-1) the claw catches an item it touches
-        ClawGrabCapacity,      // how many items the claw can carry at once
+        MagnetSweepSpeed,
+        MagnetVerticalSpeed,
+        MagnetGrabCapacity,    // how many items the magnet can carry at once
+        MagnetRange,           // side length (width) of the square magnet pickup zone (world units)
         SpawnInterval,     // lower = faster rain
         MaxLiveItems,
         HandStrength,      // higher = drag heavier/faster without slipping
         DragCount,         // how many items one drag can hold
         DragRadius,        // pickup radius for multi-grab
-        AutoClaw,          // >0 = auto drop unlocked
-        AutoClawInterval,  // average seconds between automatic drops
+        AutoMagnet,        // >0 = auto drop unlocked
+        AutoMagnetInterval,// average seconds between automatic drops
         ConveyorSpeed,     // belt units per second
         ConveyorGrip,      // how fast items lock onto the belt
     }

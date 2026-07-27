@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace CraneMachine
 {
     [RequireComponent(typeof(Button))]
-    public class AutoClawToggle : MonoBehaviour
+    public class AutoMagnetToggle : MonoBehaviour
     {
         [SerializeField] private TextMeshProUGUI label;
         [SerializeField] private Image indicator;
@@ -13,7 +13,7 @@ namespace CraneMachine
         [SerializeField] private string offText = "Auto: OFF";
         [SerializeField] private Color onColor = new Color(0.4f, 1f, 0.45f);
         [SerializeField] private Color offColor = new Color(0.55f, 0.55f, 0.55f);
-        [Tooltip("Hide the button until the Auto Claw upgrade is bought.")]
+        [Tooltip("Hide the button until the Auto Magnet upgrade is bought.")]
         [SerializeField] private bool hideUntilUnlocked = true;
 
         private Button _button;
@@ -37,27 +37,27 @@ namespace CraneMachine
 
         private void OnClick()
         {
-            var claw = ServiceLocator.Claw;
-            if (claw == null) return;
+            var magnet = ServiceLocator.Magnet;
+            if (magnet == null) return;
 
-            claw.ToggleAutoClaw();
+            magnet.ToggleAutoMagnet();
             Refresh();
         }
 
         private void Refresh()
         {
-            var claw = ServiceLocator.Claw;
-            if (claw == null) return;
+            var magnet = ServiceLocator.Magnet;
+            if (magnet == null) return;
 
             if (hideUntilUnlocked)
             {
-                bool unlocked = claw.AutoClawUnlocked;
+                bool unlocked = magnet.AutoMagnetUnlocked;
                 if (gameObject.activeSelf != unlocked)
                     gameObject.SetActive(unlocked);
                 if (!unlocked) return;
             }
 
-            bool on = claw.AutoClawEnabled;
+            bool on = magnet.AutoMagnetEnabled;
             if (label != null) label.text = on ? onText : offText;
             if (indicator != null) indicator.color = on ? onColor : offColor;
         }

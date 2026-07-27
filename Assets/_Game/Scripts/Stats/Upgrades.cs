@@ -65,66 +65,66 @@ namespace CraneMachine
 
     #endregion
 
-    #region Claw
+    #region Magnet
 
-    public class ClawSpeedUpgrade : Upgrade
+    public class MagnetSpeedUpgrade : Upgrade
     {
-        protected override string Name => "Faster Claw";
+        protected override string Name => "Faster Magnet";
         protected override int BaseCost => 60;
         protected override float CostMultiplier => 1.55f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
-            Game(GameStat.ClawSweepSpeed).AddModifier(new StatModifier(0.5f, StatModifierEffect.Add));
+            Game(GameStat.MagnetSweepSpeed).AddModifier(new StatModifier(0.5f, StatModifierEffect.Add));
     }
 
-    public class ClawLiftSpeedUpgrade : Upgrade
+    public class MagnetLiftSpeedUpgrade : Upgrade
     {
         protected override string Name => "Faster Lift";
         protected override int BaseCost => 70;
         protected override float CostMultiplier => 1.55f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
-            Game(GameStat.ClawVerticalSpeed).AddModifier(new StatModifier(0.75f, StatModifierEffect.Add));
+            Game(GameStat.MagnetVerticalSpeed).AddModifier(new StatModifier(0.75f, StatModifierEffect.Add));
     }
 
     public class GrabCapacityUpgrade : Upgrade
     {
-        protected override string Name => "Bigger Claw";
+        protected override string Name => "Bigger Magnet";
         protected override int BaseCost => 600;
         protected override float CostMultiplier => 2.0f;
         protected override int MaxPurchases => 3;
         protected override void ApplyEffect() =>
-            Game(GameStat.ClawGrabCapacity).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
+            Game(GameStat.MagnetGrabCapacity).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
     }
 
-    public class AutoClawUpgrade : Upgrade
+    public class MagnetRangeUpgrade : Upgrade
     {
-        protected override string Name => "Auto Claw";
+        protected override string Name => "Wider Magnet";
+        protected override int BaseCost => 320;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 6;
+        protected override void ApplyEffect() =>
+            Game(GameStat.MagnetRange).AddModifier(new StatModifier(0.5f, StatModifierEffect.Add));
+    }
+
+    public class AutoMagnetUpgrade : Upgrade
+    {
+        protected override string Name => "Auto Magnet";
         protected override int BaseCost => 1800;
         protected override float CostMultiplier => 1.5f;
         protected override int MaxPurchases => 1;
         protected override void ApplyEffect() =>
-            Game(GameStat.AutoClaw).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
+            Game(GameStat.AutoMagnet).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
     }
 
-    public class AutoClawRateUpgrade : Upgrade
+    public class AutoMagnetRateUpgrade : Upgrade
     {
-        protected override string Name => "Auto Claw Rate";
+        protected override string Name => "Auto Magnet Rate";
         protected override int BaseCost => 450;
         protected override float CostMultiplier => 1.6f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
-            Game(GameStat.AutoClawInterval).AddModifier(new StatModifier(-0.9f, StatModifierEffect.Add));
-    }
-
-    public class GrabStrengthUpgrade : Upgrade
-    {
-        protected override string Name => "Stronger Grip";
-        protected override int BaseCost => 90;
-        protected override float CostMultiplier => 1.5f;
-        protected override int MaxPurchases => 7;
-        protected override void ApplyEffect() =>
-            Game(GameStat.ClawGrabStrength).AddModifier(new StatModifier(0.08f, StatModifierEffect.Add));
+            Game(GameStat.AutoMagnetInterval).AddModifier(new StatModifier(-0.9f, StatModifierEffect.Add));
     }
 
     #endregion
@@ -320,11 +320,11 @@ namespace CraneMachine
 
     #region Object unlocks
 
-    public class UnlockClawUpgrade : ActivateObjectUpgrade
+    public class UnlockMagnetUpgrade : ActivateObjectUpgrade
     {
-        protected override string Name => "Claw";
+        protected override string Name => "Magnet";
         protected override int BaseCost => 100;
-        protected override UnlockTarget Target => UnlockTarget.Claw;
+        protected override UnlockTarget Target => UnlockTarget.Magnet;
     }
 
     public class UnlockConveyorUpgrade : ActivateObjectUpgrade

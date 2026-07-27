@@ -5,8 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace CraneMachine
 {
-    // Central input access. Frontend just reads ClawInput.GrabPressed.
-    public class ClawInput : MonoBehaviour
+    public class MagnetInput : MonoBehaviour
     {
         public static bool GrabPressed { get; private set; }
 
