@@ -2,32 +2,35 @@ using UnityEngine;
 
 namespace CraneMachine
 {
-    [RequireComponent(typeof(HingeJoint))]
     public class ClawProng : MonoBehaviour
     {
         [SerializeField] private ProngConfig config = new ProngConfig();
 
-        private HingeJoint _hinge;
+        private float _target;
+        private float _current;
 
-        private float openAngle => config.openAngle;
-        private float closedAngle => config.closedAngle;
-
-        private float Force =>
-            ServiceLocator.StatService != null ? ServiceLocator.StatService.GameValue(GameStat.GrabStrength) : config.motorForce;
-
-        private void Awake() => _hinge = GetComponent<HingeJoint>();
-
-        public void Open()  => DriveTo(openAngle);
-        public void Close() => DriveTo(closedAngle);
-
-        private void DriveTo(float targetAngle)
+        private void Awake()
         {
-            _hinge.useSpring = true;
-            var spring = _hinge.spring;
-            spring.targetPosition = targetAngle;
-            spring.spring = Force;
-            spring.damper = Force * 0.1f;
-            _hinge.spring = spring;
+            _current = config.openAngle;
+            _target = config.openAngle;
+            Apply();
+        }
+
+        public void Open() => _target = config.openAngle;
+        public void Close() => _target = config.closedAngle;
+
+        private void Update()
+        {
+            if (Mathf.Approximately(_current, _target)) return;
+
+            _current = Mathf.MoveTowards(_current, _target, config.motorSpeed * Time.deltaTime);
+            Apply();
+        }
+
+        private void Apply()
+        {
+            var e = transform.localEulerAngles;
+            transform.localEulerAngles = new Vector3(e.x, e.y, _current);
         }
     }
 }

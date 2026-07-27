@@ -21,6 +21,13 @@ namespace CraneMachine
             Item<T>(ItemStat.Unlocked).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
     }
 
+    public abstract class ItemWeightUpgrade<T> : Upgrade where T : ItemType
+    {
+        protected abstract float WeightPerLevel { get; }
+        protected override void ApplyEffect() =>
+            Item<T>(ItemStat.Weight).AddModifier(new StatModifier(WeightPerLevel, StatModifierEffect.Add));
+    }
+
     #endregion
 
     #region Drag
@@ -28,8 +35,8 @@ namespace CraneMachine
     public class HandStrengthUpgrade : Upgrade
     {
         protected override string Name => "Stronger Hands";
-        protected override int BaseCost => 15;
-        protected override float CostMultiplier => 1.4f;
+        protected override int BaseCost => 20;
+        protected override float CostMultiplier => 1.45f;
         protected override string Icon => "UpgradeIcons/Hand";
         protected override int MaxPurchases => 10;
         protected override void ApplyEffect() =>
@@ -39,8 +46,8 @@ namespace CraneMachine
     public class DragCountUpgrade : Upgrade
     {
         protected override string Name => "Extra Hand";
-        protected override int BaseCost => 60;
-        protected override float CostMultiplier => 1.7f;
+        protected override int BaseCost => 80;
+        protected override float CostMultiplier => 1.75f;
         protected override int MaxPurchases => 4;
         protected override void ApplyEffect() =>
             Game(GameStat.DragCount).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
@@ -49,7 +56,7 @@ namespace CraneMachine
     public class DragRadiusUpgrade : Upgrade
     {
         protected override string Name => "Wider Reach";
-        protected override int BaseCost => 35;
+        protected override int BaseCost => 45;
         protected override float CostMultiplier => 1.5f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
@@ -63,7 +70,7 @@ namespace CraneMachine
     public class ClawSpeedUpgrade : Upgrade
     {
         protected override string Name => "Faster Claw";
-        protected override int BaseCost => 40;
+        protected override int BaseCost => 60;
         protected override float CostMultiplier => 1.55f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
@@ -73,21 +80,51 @@ namespace CraneMachine
     public class ClawLiftSpeedUpgrade : Upgrade
     {
         protected override string Name => "Faster Lift";
-        protected override int BaseCost => 45;
+        protected override int BaseCost => 70;
         protected override float CostMultiplier => 1.55f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
             Game(GameStat.ClawVerticalSpeed).AddModifier(new StatModifier(0.75f, StatModifierEffect.Add));
     }
 
+    public class GrabCapacityUpgrade : Upgrade
+    {
+        protected override string Name => "Bigger Claw";
+        protected override int BaseCost => 600;
+        protected override float CostMultiplier => 2.0f;
+        protected override int MaxPurchases => 3;
+        protected override void ApplyEffect() =>
+            Game(GameStat.ClawGrabCapacity).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
+    }
+
+    public class AutoClawUpgrade : Upgrade
+    {
+        protected override string Name => "Auto Claw";
+        protected override int BaseCost => 1800;
+        protected override float CostMultiplier => 1.5f;
+        protected override int MaxPurchases => 1;
+        protected override void ApplyEffect() =>
+            Game(GameStat.AutoClaw).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
+    }
+
+    public class AutoClawRateUpgrade : Upgrade
+    {
+        protected override string Name => "Auto Claw Rate";
+        protected override int BaseCost => 450;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 6;
+        protected override void ApplyEffect() =>
+            Game(GameStat.AutoClawInterval).AddModifier(new StatModifier(-0.9f, StatModifierEffect.Add));
+    }
+
     public class GrabStrengthUpgrade : Upgrade
     {
         protected override string Name => "Stronger Grip";
-        protected override int BaseCost => 50;
+        protected override int BaseCost => 90;
         protected override float CostMultiplier => 1.5f;
-        protected override int MaxPurchases => 6;
+        protected override int MaxPurchases => 7;
         protected override void ApplyEffect() =>
-            Game(GameStat.GrabStrength).AddModifier(new StatModifier(25f, StatModifierEffect.Add));
+            Game(GameStat.ClawGrabStrength).AddModifier(new StatModifier(0.08f, StatModifierEffect.Add));
     }
 
     #endregion
@@ -97,21 +134,21 @@ namespace CraneMachine
     public class FasterRainUpgrade : Upgrade
     {
         protected override string Name => "Faster Items";
-        protected override int BaseCost => 80;
-        protected override float CostMultiplier => 1.55f;
-        protected override int MaxPurchases => 7;
+        protected override int BaseCost => 150;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
-            Game(GameStat.SpawnInterval).AddModifier(new StatModifier(-0.28f, StatModifierEffect.Add));
+            Game(GameStat.SpawnInterval).AddModifier(new StatModifier(-0.48f, StatModifierEffect.Add));
     }
 
     public class MoreItemsUpgrade : Upgrade
     {
-        protected override string Name => "More Items";
-        protected override int BaseCost => 110;
+        protected override string Name => "Max Items";
+        protected override int BaseCost => 200;
         protected override float CostMultiplier => 1.65f;
-        protected override int MaxPurchases => 6;
+        protected override int MaxPurchases => 8;
         protected override void ApplyEffect() =>
-            Game(GameStat.MaxLiveItems).AddModifier(new StatModifier(3, StatModifierEffect.Add));
+            Game(GameStat.MaxLiveItems).AddModifier(new StatModifier(4, StatModifierEffect.Add));
     }
 
     #endregion
@@ -121,7 +158,7 @@ namespace CraneMachine
     public class MoneyMultiplierUpgrade : Upgrade
     {
         protected override string Name => "Better Prices";
-        protected override int BaseCost => 45;
+        protected override int BaseCost => 60;
         protected override float CostMultiplier => 1.55f;
         protected override int MaxPurchases => 10;
         protected override void ApplyEffect() =>
@@ -134,42 +171,52 @@ namespace CraneMachine
 
     public class EggValueUpgrade : Upgrade
     {
-        protected override string Name => "Golden Eggs";
-        protected override int BaseCost => 30;
+        protected override string Name => "Egg Value";
+        protected override int BaseCost => 40;
         protected override float CostMultiplier => 1.5f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
-            Item<Egg>(ItemStat.SellValue).AddModifier(new StatModifier(4f, StatModifierEffect.Add));
+            Item<Egg>(ItemStat.SellValue).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
     }
 
     public class TeddyValueUpgrade : Upgrade
     {
-        protected override string Name => "Plush Premium";
-        protected override int BaseCost => 70;
+        protected override string Name => "Teddy Value";
+        protected override int BaseCost => 680;
         protected override float CostMultiplier => 1.5f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
-            Item<TeddyBear>(ItemStat.SellValue).AddModifier(new StatModifier(10f, StatModifierEffect.Add));
+            Item<TeddyBear>(ItemStat.SellValue).AddModifier(new StatModifier(20f, StatModifierEffect.Add));
+    }
+
+    public class BananaValueUpgrade : Upgrade
+    {
+        protected override string Name => "Banana Value";
+        protected override int BaseCost => 110;
+        protected override float CostMultiplier => 1.5f;
+        protected override int MaxPurchases => 6;
+        protected override void ApplyEffect() =>
+            Item<Banana>(ItemStat.SellValue).AddModifier(new StatModifier(3f, StatModifierEffect.Add));
     }
 
     public class ScrapValueUpgrade : Upgrade
     {
-        protected override string Name => "Scrap Dealer";
-        protected override int BaseCost => 25;
+        protected override string Name => "Tin Can Value";
+        protected override int BaseCost => 280;
         protected override float CostMultiplier => 1.45f;
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
-            Item<TinCan>(ItemStat.SellValue).AddModifier(new StatModifier(3f, StatModifierEffect.Add));
+            Item<TinCan>(ItemStat.SellValue).AddModifier(new StatModifier(8f, StatModifierEffect.Add));
     }
 
     public class DiamondValueUpgrade : Upgrade
     {
-        protected override string Name => "Diamond Polish";
-        protected override int BaseCost => 400;
+        protected override string Name => "Diamond Value";
+        protected override int BaseCost => 1800;
         protected override float CostMultiplier => 1.6f;
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
-            Item<Diamond>(ItemStat.SellValue).AddModifier(new StatModifier(40f, StatModifierEffect.Add));
+            Item<Diamond>(ItemStat.SellValue).AddModifier(new StatModifier(50f, StatModifierEffect.Add));
     }
 
     #endregion
@@ -178,28 +225,95 @@ namespace CraneMachine
 
     public class LighterItemsUpgrade : Upgrade
     {
-        protected override string Name => "Featherweight";
-        protected override int BaseCost => 350;
+        protected override string Name => "Lighter Diamonds";
+        protected override int BaseCost => 900;
         protected override float CostMultiplier => 1.7f;
         protected override int MaxPurchases => 4;
         protected override void ApplyEffect() =>
-            Item<Diamond>(ItemStat.Mass).AddModifier(new StatModifier(-0.15f, StatModifierEffect.Add));
+            Item<Diamond>(ItemStat.Mass).AddModifier(new StatModifier(-0.1f, StatModifierEffect.Add));
+    }
+
+    #endregion
+
+    #region Item chance
+
+    public class TinCanChanceUpgrade : ItemWeightUpgrade<TinCan>
+    {
+        protected override string Name => "Tin Can Luck";
+        protected override int BaseCost => 350;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 4;
+        protected override float WeightPerLevel => 0.12f;
+    }
+
+    public class TeddyChanceUpgrade : ItemWeightUpgrade<TeddyBear>
+    {
+        protected override string Name => "Teddy Luck";
+        protected override int BaseCost => 900;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 4;
+        protected override float WeightPerLevel => 0.1f;
+    }
+
+    public class DiamondChanceUpgrade : ItemWeightUpgrade<Diamond>
+    {
+        protected override string Name => "Diamond Luck";
+        protected override int BaseCost => 2200;
+        protected override float CostMultiplier => 1.7f;
+        protected override int MaxPurchases => 4;
+        protected override float WeightPerLevel => 0.08f;
     }
 
     #endregion
 
     #region Item unlocks
 
+    public class UnlockBananaUpgrade : UnlockItemUpgrade<Banana>
+    {
+        protected override string Name => "Bananas";
+        protected override int BaseCost => 90;
+    }
+
+    public class UnlockTinCanUpgrade : UnlockItemUpgrade<TinCan>
+    {
+        protected override string Name => "Tin Cans";
+        protected override int BaseCost => 420;
+    }
+
     public class UnlockTeddyUpgrade : UnlockItemUpgrade<TeddyBear>
     {
         protected override string Name => "Teddy Bears";
-        protected override int BaseCost => 90;
+        protected override int BaseCost => 1300;
     }
 
     public class UnlockDiamondUpgrade : UnlockItemUpgrade<Diamond>
     {
         protected override string Name => "Diamonds";
-        protected override int BaseCost => 1400;
+        protected override int BaseCost => 3400;
+    }
+
+    #endregion
+
+    #region Conveyor
+
+    public class ConveyorSpeedUpgrade : Upgrade
+    {
+        protected override string Name => "Faster Belt";
+        protected override int BaseCost => 300;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 6;
+        protected override void ApplyEffect() =>
+            Game(GameStat.ConveyorSpeed).AddModifier(new StatModifier(0.75f, StatModifierEffect.Add));
+    }
+
+    public class ConveyorGripUpgrade : Upgrade
+    {
+        protected override string Name => "Belt Grip";
+        protected override int BaseCost => 250;
+        protected override float CostMultiplier => 1.55f;
+        protected override int MaxPurchases => 4;
+        protected override void ApplyEffect() =>
+            Game(GameStat.ConveyorGrip).AddModifier(new StatModifier(6f, StatModifierEffect.Add));
     }
 
     #endregion
@@ -209,21 +323,21 @@ namespace CraneMachine
     public class UnlockClawUpgrade : ActivateObjectUpgrade
     {
         protected override string Name => "Claw";
-        protected override int BaseCost => 250;
+        protected override int BaseCost => 100;
         protected override UnlockTarget Target => UnlockTarget.Claw;
     }
 
     public class UnlockConveyorUpgrade : ActivateObjectUpgrade
     {
         protected override string Name => "Conveyor Belt";
-        protected override int BaseCost => 900;
+        protected override int BaseCost => 550;
         protected override UnlockTarget Target => UnlockTarget.Conveyor;
     }
 
     public class UnlockAutoSeller : ActivateObjectUpgrade
     {
         protected override string Name => "AutoSeller";
-        protected override int BaseCost => 2500;
+        protected override int BaseCost => 2650;
         protected override UnlockTarget Target => UnlockTarget.AutoSeller;
     }
 

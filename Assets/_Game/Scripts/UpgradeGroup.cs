@@ -41,7 +41,7 @@ namespace CraneMachine
 
             var buttons = buttonParent.GetComponentsInChildren<UpgradeButton>(true);
             foreach (var b in buttons)
-                if (b.Unlocked) return true;
+                if (b.Visible) return true;
 
             return false;
         }

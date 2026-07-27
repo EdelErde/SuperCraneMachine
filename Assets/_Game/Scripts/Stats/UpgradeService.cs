@@ -7,10 +7,34 @@ namespace CraneMachine
     public class UpgradeService : MonoBehaviour
     {
         private readonly Dictionary<Type, int> _purchases = new Dictionary<Type, int>();
+        private readonly Dictionary<Type, UpgradeButton> _buttons = new Dictionary<Type, UpgradeButton>();
 
         public event Action OnUpgradesChanged;
 
+        public void RegisterButton(UpgradeButton button)
+        {
+            if (button != null && button.Upgrade != null)
+                _buttons[button.Upgrade.GetType()] = button;
+        }
+
+        public void UnregisterButton(UpgradeButton button)
+        {
+            if (button != null && button.Upgrade != null)
+                _buttons.Remove(button.Upgrade.GetType());
+        }
+
+        public UpgradeButton FindButton(Type upgradeType)
+            => _buttons.TryGetValue(upgradeType, out var b) ? b : null;
+
         private void Awake() => ServiceLocator.UpgradeService = this;
+
+        private void Start() => StartCoroutine(SyncAfterRegistration());
+
+        private System.Collections.IEnumerator SyncAfterRegistration()
+        {
+            yield return new WaitForEndOfFrame();
+            OnUpgradesChanged?.Invoke();
+        }
 
         public bool CanAfford(IUpgrade upgrade)
             => !upgrade.MaxedOut && ServiceLocator.StatService.Has(upgrade.CurrentCost);

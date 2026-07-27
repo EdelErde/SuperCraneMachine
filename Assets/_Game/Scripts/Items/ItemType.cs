@@ -11,6 +11,8 @@ namespace CraneMachine
 
         public virtual bool StartsUnlocked => true;
 
+        public virtual string DisplayName => GetType().Name;
+
         public Type Key => GetType();
 
         public int SellValue =>
@@ -21,41 +23,54 @@ namespace CraneMachine
         public bool Unlocked =>
             ServiceLocator.StatService == null ||
             ServiceLocator.StatService.ItemValue(Key, ItemStat.Unlocked) > 0f;
+
+        public float CurrentWeight =>
+            ServiceLocator.StatService == null
+                ? SpawnWeight
+                : UnityEngine.Mathf.Max(0f, ServiceLocator.StatService.ItemValue(Key, ItemStat.Weight));
     }
 
     [Serializable]
     public class Egg : ItemType
     {
         public override int BaseSellValue => 5;
+        public override float BaseMass => 0.25f;
+        public override float SpawnWeight => 1.0f;
+    }
+
+    [Serializable]
+    public class Banana : ItemType
+    {
+        public override int BaseSellValue => 14;
         public override float BaseMass => 0.3f;
-    }
-
-    [Serializable]
-    public class TeddyBear : ItemType
-    {
-        public override int BaseSellValue => 15;
-        public override float BaseMass => 0.6f;
-    }
-
-    [Serializable]
-    public class Diamond : ItemType
-    {
-        public override int BaseSellValue => 100;
-        public override float BaseMass => 1.2f;
+        public override float SpawnWeight => 0.85f;
         public override bool StartsUnlocked => false;
     }
 
     [Serializable]
     public class TinCan : ItemType
     {
-        public override int BaseSellValue => 2;
+        public override int BaseSellValue => 35;
         public override float BaseMass => 0.4f;
+        public override float SpawnWeight => 0.65f;
+        public override bool StartsUnlocked => false;
     }
 
     [Serializable]
-    public class Banana : ItemType
+    public class TeddyBear : ItemType
     {
-        public override int BaseSellValue => 3;
-        public override float BaseMass => 0.2f;
+        public override int BaseSellValue => 85;
+        public override float BaseMass => 0.55f;
+        public override float SpawnWeight => 0.45f;
+        public override bool StartsUnlocked => false;
+    }
+
+    [Serializable]
+    public class Diamond : ItemType
+    {
+        public override int BaseSellValue => 220;
+        public override float BaseMass => 0.8f;
+        public override float SpawnWeight => 0.28f;
+        public override bool StartsUnlocked => false;
     }
 }

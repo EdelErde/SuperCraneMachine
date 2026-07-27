@@ -38,12 +38,17 @@ namespace CraneMachine
             _game.RegisterStat(GameStat.MoneyMultiplier, 1f);
             _game.RegisterStat(GameStat.ClawSweepSpeed, 2.5f);
             _game.RegisterStat(GameStat.ClawVerticalSpeed, 3f);
-            _game.RegisterStat(GameStat.GrabStrength, 100f);
+            _game.RegisterStat(GameStat.ClawGrabStrength, 0.35f);
+            _game.RegisterStat(GameStat.ClawGrabCapacity, 1f);
             _game.RegisterStat(GameStat.SpawnInterval, 2.5f);
-            _game.RegisterStat(GameStat.MaxLiveItems, 12f);
+            _game.RegisterStat(GameStat.MaxLiveItems, 4f);
             _game.RegisterStat(GameStat.HandStrength, .3f);
             _game.RegisterStat(GameStat.DragCount, 1f);
             _game.RegisterStat(GameStat.DragRadius, 0.75f);
+            _game.RegisterStat(GameStat.AutoClaw, 0f);
+            _game.RegisterStat(GameStat.AutoClawInterval, 8f);
+            _game.RegisterStat(GameStat.ConveyorSpeed, 2f);
+            _game.RegisterStat(GameStat.ConveyorGrip, 12f);
         }
 
         private void RegisterItemStats()
@@ -59,6 +64,7 @@ namespace CraneMachine
                 container.RegisterStat(ItemStat.SellValue, proto.BaseSellValue);
                 container.RegisterStat(ItemStat.Mass, proto.BaseMass);
                 container.RegisterStat(ItemStat.Unlocked, proto.StartsUnlocked ? 1f : 0f);
+                container.RegisterStat(ItemStat.Weight, proto.SpawnWeight);
                 _items[t] = container;
             }
         }

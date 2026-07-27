@@ -5,6 +5,7 @@ namespace CraneMachine
 {
     public class ItemSpawner : MonoBehaviour
     {
+        public ItemDatabase Database => database;
         [SerializeField] private ItemDatabase database;
         [SerializeField] private BoxCollider2D spawnArea;
 
@@ -12,7 +13,16 @@ namespace CraneMachine
         [SerializeField] private SpawnerConfig config = new SpawnerConfig();
 
         private float _timer;
+        private float _cycle = 1f;
         private readonly List<Item> _live = new List<Item>();
+
+        public event System.Action OnSpawned;
+
+        public float SpawnProgress =>
+            _cycle <= 0.001f ? 0f : Mathf.Clamp01(1f - (_timer / _cycle));
+
+        public float TimeToNextSpawn => Mathf.Max(0f, _timer);
+        public bool Paused => MaxLiveValue > 0 && _live.Count >= MaxLiveValue;
 
         private int itemsPerDrop => config.itemsPerDrop;
         private float intervalJitter => config.intervalJitter;
@@ -29,7 +39,8 @@ namespace CraneMachine
         private void Start()
         {
             if (spawnOnStart) SpawnBatch(initialBurst);
-            _timer = NextInterval();
+            _cycle = NextInterval();
+            _timer = _cycle;
         }
 
         private void Update()
@@ -37,11 +48,14 @@ namespace CraneMachine
             _timer -= Time.deltaTime;
             if (_timer > 0f) return;
 
-            _timer = NextInterval();
+            _cycle = NextInterval();
+            _timer = _cycle;
 
             if (AtCap()) return;
             for (int i = 0; i < itemsPerDrop && !AtCap(); i++)
                 SpawnOne();
+
+            OnSpawned?.Invoke();
         }
 
         public void SpawnBatch(int count)
