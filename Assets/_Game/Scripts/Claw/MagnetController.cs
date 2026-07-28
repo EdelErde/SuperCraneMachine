@@ -32,6 +32,9 @@ namespace CraneMachine
 
         private readonly List<Item> _carried = new List<Item>();
         private readonly List<Rigidbody2D> _carriedBodies = new List<Rigidbody2D>();
+        // X offset (relative to the tip) captured when each item was grabbed, so items
+        // hold the lane they were caught in instead of sliding sideways.
+        private readonly List<float> _carriedOffsetX = new List<float>();
         private readonly Collider2D[] _grabHits = new Collider2D[32];
 
         public int CarriedCount => _carried.Count;
@@ -275,22 +278,29 @@ namespace CraneMachine
         {
             var rb = item.GetComponent<Rigidbody2D>();
             if (rb == null || _carriedBodies.Contains(rb)) return;
+            // Lock in the X lane this item was caught at (relative to the tip).
+            float offsetX = magnetTip != null ? rb.position.x - magnetTip.position.x : 0f;
             _carried.Add(item);
             _carriedBodies.Add(rb);
+            _carriedOffsetX.Add(offsetX);
         }
 
-        // Called every physics step while items are held: pull each toward the tip with an
-        // inverse-distance force, damp its velocity so it settles, and release it if the
-        // player is dragging it hard enough to overpower the magnet.
+        // Called every physics step while items are held. Each item is pulled to a target
+        // at (tip.x + its captured X lane, tip.y) using a critically-damped spring, so it
+        // rises straight up to the magnet face and settles without orbiting or jitter.
         private void ApplyMagnetism()
         {
             if (_carried.Count == 0 || magnetTip == null) return;
             Vector2 tip = magnetTip.position;
 
-            float baseForce = config.attractForce;
-            float soft = Mathf.Max(0.01f, config.attractSoftening);
-            float maxF = config.attractMaxForce;
             float hand = StatOr(GameStat.HandStrength, 0.3f);
+            float dt = Time.fixedDeltaTime;
+
+            // Spring response: higher stiffness = snappier. Damping is derived for critical
+            // damping (no overshoot) from the stiffness.
+            float stiffness = Mathf.Max(0.01f, config.holdStiffness);
+            float omega = Mathf.Sqrt(stiffness);              // natural frequency
+            float dampCoef = 2f * omega * config.holdDampingRatio; // ~1.0 ratio = critical
 
             for (int i = _carried.Count - 1; i >= 0; i--)
             {
@@ -298,32 +308,35 @@ namespace CraneMachine
                 var rb = _carriedBodies[i];
                 if (item == null || rb == null) { RemoveAt(i); continue; }
 
-                // Pull-off: if the player is dragging this item, hand strength competes with pull.
+                // Target: hold the captured X lane, pull fully up to the tip in Y.
+                Vector2 target = new Vector2(tip.x + _carriedOffsetX[i], tip.y);
+                Vector2 toTarget = target - rb.position;
+
+                // Pull-off: dragging competes with the spring's restoring strength here.
                 if (item.IsDragging)
                 {
-                    // Effective magnet grip at this item's distance.
-                    Vector2 d0 = tip - rb.position;
-                    float dist0 = d0.magnitude;
-                    float grip = Mathf.Min(maxF, baseForce / (dist0 * dist0 + soft * soft));
-                    // Hand pulls with a force proportional to HandStrength; scale to comparable units.
-                    float pull = hand * 100f;
-                    if (pull > grip * config.breakFreeFactor)
+                    float grip = stiffness * toTarget.magnitude;   // spring force magnitude
+                    float pull = hand * config.handPullScale;
+                    if (pull > Mathf.Max(0.01f, grip) * config.breakFreeFactor)
                     {
-                        RemoveAt(i);   // player wins the tug of war — item leaves the magnet
+                        RemoveAt(i);   // player overpowers the magnet
                         continue;
                     }
                 }
 
-                Vector2 d = tip - rb.position;
-                float dist = d.magnitude;
-                if (dist > 0.0001f)
+                // Critically-damped spring as a velocity target (stable, no force spikes):
+                //   a = k*x - c*v  ->  integrate into velocity
+                Vector2 accel = toTarget * stiffness - rb.linearVelocity * dampCoef;
+                rb.linearVelocity += accel * dt;
+
+                // Snap-settle: once basically at the lane and slow, kill residual motion so
+                // it reads as "stuck to the magnet" rather than micro-vibrating.
+                if (toTarget.sqrMagnitude < config.settleDistance * config.settleDistance &&
+                    rb.linearVelocity.sqrMagnitude < config.settleSpeed * config.settleSpeed)
                 {
-                    // Inverse-distance: stronger as the item nears the tip, clamped near zero.
-                    float mag = Mathf.Min(maxF, baseForce / (dist * dist + soft * soft));
-                    rb.AddForce(d.normalized * mag);
+                    rb.linearVelocity = Vector2.zero;
+                    rb.position = Vector2.Lerp(rb.position, target, config.settleSnap);
                 }
-                // Damp so items settle and clump at the tip instead of orbiting/oscillating.
-                rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, config.holdDamping * Time.fixedDeltaTime);
             }
         }
 
@@ -331,12 +344,14 @@ namespace CraneMachine
         {
             _carried.RemoveAt(i);
             _carriedBodies.RemoveAt(i);
+            _carriedOffsetX.RemoveAt(i);
         }
 
         private void ReleaseCarried()
         {
             _carried.Clear();
             _carriedBodies.Clear();
+            _carriedOffsetX.Clear();
         }
 
         private float StatOr(GameStat stat, float fallback) =>
