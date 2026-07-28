@@ -8,6 +8,7 @@ namespace CraneMachine
         string DisplayName { get; }
         string IconPath { get; }
         int TimesPurchased { get; }
+        int MaxPurchases { get; }
         void Apply();
     }
 }

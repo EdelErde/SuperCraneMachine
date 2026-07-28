@@ -39,8 +39,9 @@ namespace CraneMachine
             _game.RegisterStat(GameStat.MoneyMultiplier, 1f);
             _game.RegisterStat(GameStat.MagnetSweepSpeed, 2.5f);
             _game.RegisterStat(GameStat.MagnetVerticalSpeed, 3f);
-            _game.RegisterStat(GameStat.MagnetGrabCapacity, 1f);
-            _game.RegisterStat(GameStat.MagnetRange, 1.5f);
+            _game.RegisterStat(GameStat.MagnetGrabCapacity, 2f);
+            _game.RegisterStat(GameStat.MagnetRange, 1f);
+            _game.RegisterStat(GameStat.MagnetDepth, .5f);
             _game.RegisterStat(GameStat.SpawnInterval, 2.5f);
             _game.RegisterStat(GameStat.MaxLiveItems, 4f);
             _game.RegisterStat(GameStat.HandStrength, .3f);

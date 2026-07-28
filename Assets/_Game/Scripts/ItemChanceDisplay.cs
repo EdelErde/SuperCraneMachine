@@ -13,7 +13,9 @@ namespace CraneMachine
 
         [Header("Format")]
         [SerializeField] private string chanceFormat = "{0:0.#}%";
-        [Tooltip("How often to check for changes. Rebuilds only when chances actually differ.")]
+        [Tooltip("Show the current sell price (incl. all multipliers) on each row.")]
+        [SerializeField] private bool showPrice = true;
+        [Tooltip("How often to check for changes. Rebuilds only when values actually differ.")]
         [SerializeField] private float refreshInterval = 0.5f;
         [SerializeField] private bool refreshOnUpgrade = true;
 
@@ -47,6 +49,14 @@ namespace CraneMachine
             _lastHash = 0;
             RebuildIfChanged();
         }
+        
+        private int PriceOf(ItemType type)
+        {
+            if (type == null) return 0;
+            float mult = ServiceLocator.StatService != null
+                ? ServiceLocator.StatService.GameValue(GameStat.MoneyMultiplier) : 1f;
+            return Mathf.RoundToInt(type.SellValue * mult);
+        }
 
         private void RebuildIfChanged()
         {
@@ -71,11 +81,11 @@ namespace CraneMachine
                 var (type, chance, sprite) = chances[i];
                 var row = _pool[i].GetComponent<ItemIcon>();
                 if (row != null)
-                    row.Set(type.DisplayName, chance, chanceFormat, sprite);
+                    row.Set(type.DisplayName, chance, chanceFormat, sprite, showPrice ? PriceOf(type) : -1);
             }
         }
 
-        private static int ComputeHash(List<(ItemType type, float chance, Sprite sprite)> chances)
+        private int ComputeHash(List<(ItemType type, float chance, Sprite sprite)> chances)
         {
             unchecked
             {
@@ -84,6 +94,7 @@ namespace CraneMachine
                 {
                     h = h * 31 + (type != null ? type.DisplayName.GetHashCode() : 0);
                     h = h * 31 + Mathf.RoundToInt(chance * 1000f);
+                    if (showPrice) h = h * 31 + PriceOf(type); // refresh when price/multiplier changes
                 }
                 return h;
             }

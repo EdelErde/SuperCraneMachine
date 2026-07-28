@@ -30,7 +30,23 @@ namespace CraneMachine
         [SerializeField] private Color previewColor = new Color(0.3f, 0.3f, 0.3f);
         [SerializeField] private Color previewIconColor = new Color(0f, 0f, 0f, 0.5f);
 
+        [Header("Level pips")]
+        [Tooltip("Square pip image, spawned once per purchasable level. Leave empty to disable pips.")]
+        [SerializeField] private Image pipPrefab;
+        [Tooltip("Parent the pips spawn under (give it a horizontal layout group).")]
+        [SerializeField] private RectTransform pipContainer;
+        [Tooltip("Color for a level already bought.")]
+        [SerializeField] private Color pipBoughtColor = new Color(0.80f, 0.42f, 0.09f);   // dark orange, filled
+        [Tooltip("Color for a level still available to buy.")]
+        [SerializeField] private Color pipOpenColor = new Color(0.80f, 0.42f, 0.09f, 0.28f); // dark orange, dim
+        [Tooltip("Hide the pip row for single-purchase upgrades (unlocks, Auto Magnet, etc.).")]
+        [SerializeField] private bool hidePipsForSinglePurchase = true;
+
         public IUpgrade Upgrade => upgrade;
+
+        private readonly System.Collections.Generic.List<Image> _pips =
+            new System.Collections.Generic.List<Image>();
+        private int _pipsBuiltFor = -1;
 
         // Sets name, cost and icon from the upgrade. Safe to run in edit mode.
         public void ApplyStaticVisuals()
@@ -120,6 +136,7 @@ namespace CraneMachine
             if (IsPreview)
             {
                 ShowPreview();
+                SetPipsVisible(false);
                 return;
             }
 
@@ -128,12 +145,53 @@ namespace CraneMachine
                 costLabel.text = upgrade.MaxedOut ? "MAX" : $"${upgrade.CurrentCost}";
             if (icon != null) icon.color = Color.white;
 
+            RefreshPips();
+
             bool affordable = ServiceLocator.UpgradeService.CanAfford(upgrade);
             _button.interactable = affordable;
 
             var colors = _button.colors;
             colors.normalColor = affordable ? affordableColor : unaffordableColor;
             _button.colors = colors;
+        }
+
+        // ---- Level pips ----
+        private void RefreshPips()
+        {
+            if (pipPrefab == null || pipContainer == null) { return; }
+
+            int max = upgrade != null ? upgrade.MaxPurchases : 0;
+
+            // Single-purchase (or unbounded, max<=0): optionally hide the whole row.
+            if (max <= 1 && hidePipsForSinglePurchase)
+            {
+                SetPipsVisible(false);
+                return;
+            }
+            SetPipsVisible(true);
+
+            if (_pipsBuiltFor != max) BuildPips(max);
+
+            int bought = upgrade.TimesPurchased;
+            for (int i = 0; i < _pips.Count; i++)
+                _pips[i].color = i < bought ? pipBoughtColor : pipOpenColor;
+        }
+
+        private void BuildPips(int count)
+        {
+            // grow
+            while (_pips.Count < count)
+                _pips.Add(Instantiate(pipPrefab, pipContainer));
+            // shrink (hide extras)
+            for (int i = 0; i < _pips.Count; i++)
+                _pips[i].gameObject.SetActive(i < count);
+            _pipsBuiltFor = count;
+        }
+
+        private void SetPipsVisible(bool visible)
+        {
+            if (pipContainer != null && pipContainer.gameObject.activeSelf != visible)
+                pipContainer.gameObject.SetActive(visible);
         }
 
         private void ShowPreview()

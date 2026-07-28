@@ -20,8 +20,6 @@ namespace CraneMachine
         [Tooltip("Rigidbody2D on the magnet that caught items attach to.")]
         [SerializeField] private Rigidbody2D magnetRigidbody;
         [SerializeField] private LayerMask grabbableMask = ~0;
-        [Tooltip("Higher = items hang more rigidly. Lower = they swing loosely.")]
-        [SerializeField] private float jointStiffness = 3f;
 
         [Header("Tuning")]
         [SerializeField] private MagnetConfig config = new MagnetConfig();
@@ -33,7 +31,7 @@ namespace CraneMachine
         private float _autoTimer;
 
         private readonly List<Item> _carried = new List<Item>();
-        private readonly List<FixedJoint2D> _joints = new List<FixedJoint2D>();
+        private readonly List<Rigidbody2D> _carriedBodies = new List<Rigidbody2D>();
         private readonly Collider2D[] _grabHits = new Collider2D[32];
 
         public int CarriedCount => _carried.Count;
@@ -77,9 +75,12 @@ namespace CraneMachine
         // Visual-only work stays on the render frame.
         private void Update() => SyncVisualWidth();
 
-        // Movement runs in physics so the FixedJoint2D drags carried items along.
+        // Movement runs in physics so held items are pulled along.
         private void FixedUpdate()
         {
+            // Continuous magnetic attraction on all held items, every physics step.
+            ApplyMagnetism();
+
             switch (Current)
             {
                 case State.Sweeping:     Sweep();        break;
@@ -201,7 +202,11 @@ namespace CraneMachine
         }
 
         private float DetectionDepth => Mathf.Max(0.01f, config.detectionDepth);
-        private float PickupDepth => Mathf.Max(0.01f, config.pickupDepth);
+        // Upgradeable via the MagnetDepth stat; config is the fallback.
+        private float PickupDepth =>
+            ServiceLocator.StatService != null
+                ? Mathf.Max(0.01f, ServiceLocator.StatService.GameValue(GameStat.MagnetDepth))
+                : Mathf.Max(0.01f, config.pickupDepth);
 
         // Center and half-extents of a downward box (MagnetRange wide, `depth` tall) hanging from magnetTip.
         private void GetBox(float depth, out Vector2 center, out Vector2 halfExtents)
@@ -269,25 +274,69 @@ namespace CraneMachine
         private void Attach(Item item)
         {
             var rb = item.GetComponent<Rigidbody2D>();
-            if (rb == null || magnetRigidbody == null) return;
-
-            var joint = item.gameObject.AddComponent<FixedJoint2D>();
-            joint.connectedBody = magnetRigidbody;
-            joint.autoConfigureConnectedAnchor = true;
-            joint.dampingRatio = 0.6f;
-            joint.frequency = jointStiffness;
-
+            if (rb == null || _carriedBodies.Contains(rb)) return;
             _carried.Add(item);
-            _joints.Add(joint);
+            _carriedBodies.Add(rb);
+        }
+
+        // Called every physics step while items are held: pull each toward the tip with an
+        // inverse-distance force, damp its velocity so it settles, and release it if the
+        // player is dragging it hard enough to overpower the magnet.
+        private void ApplyMagnetism()
+        {
+            if (_carried.Count == 0 || magnetTip == null) return;
+            Vector2 tip = magnetTip.position;
+
+            float baseForce = config.attractForce;
+            float soft = Mathf.Max(0.01f, config.attractSoftening);
+            float maxF = config.attractMaxForce;
+            float hand = StatOr(GameStat.HandStrength, 0.3f);
+
+            for (int i = _carried.Count - 1; i >= 0; i--)
+            {
+                var item = _carried[i];
+                var rb = _carriedBodies[i];
+                if (item == null || rb == null) { RemoveAt(i); continue; }
+
+                // Pull-off: if the player is dragging this item, hand strength competes with pull.
+                if (item.IsDragging)
+                {
+                    // Effective magnet grip at this item's distance.
+                    Vector2 d0 = tip - rb.position;
+                    float dist0 = d0.magnitude;
+                    float grip = Mathf.Min(maxF, baseForce / (dist0 * dist0 + soft * soft));
+                    // Hand pulls with a force proportional to HandStrength; scale to comparable units.
+                    float pull = hand * 100f;
+                    if (pull > grip * config.breakFreeFactor)
+                    {
+                        RemoveAt(i);   // player wins the tug of war — item leaves the magnet
+                        continue;
+                    }
+                }
+
+                Vector2 d = tip - rb.position;
+                float dist = d.magnitude;
+                if (dist > 0.0001f)
+                {
+                    // Inverse-distance: stronger as the item nears the tip, clamped near zero.
+                    float mag = Mathf.Min(maxF, baseForce / (dist * dist + soft * soft));
+                    rb.AddForce(d.normalized * mag);
+                }
+                // Damp so items settle and clump at the tip instead of orbiting/oscillating.
+                rb.linearVelocity = Vector2.Lerp(rb.linearVelocity, Vector2.zero, config.holdDamping * Time.fixedDeltaTime);
+            }
+        }
+
+        private void RemoveAt(int i)
+        {
+            _carried.RemoveAt(i);
+            _carriedBodies.RemoveAt(i);
         }
 
         private void ReleaseCarried()
         {
-            foreach (var j in _joints)
-                if (j != null) Destroy(j);
-
-            _joints.Clear();
             _carried.Clear();
+            _carriedBodies.Clear();
         }
 
         private float StatOr(GameStat stat, float fallback) =>

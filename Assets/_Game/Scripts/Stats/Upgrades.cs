@@ -89,12 +89,12 @@ namespace CraneMachine
 
     public class GrabCapacityUpgrade : Upgrade
     {
-        protected override string Name => "Bigger Magnet";
+        protected override string Name => "Magnet Capacity";
         protected override int BaseCost => 600;
         protected override float CostMultiplier => 2.0f;
-        protected override int MaxPurchases => 3;
+        protected override int MaxPurchases => 4;
         protected override void ApplyEffect() =>
-            Game(GameStat.MagnetGrabCapacity).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
+            Game(GameStat.MagnetGrabCapacity).AddModifier(new StatModifier(4f, StatModifierEffect.Add));
     }
 
     public class MagnetRangeUpgrade : Upgrade
@@ -105,6 +105,16 @@ namespace CraneMachine
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
             Game(GameStat.MagnetRange).AddModifier(new StatModifier(0.5f, StatModifierEffect.Add));
+    }
+
+    public class MagnetDepthUpgrade : Upgrade
+    {
+        protected override string Name => "Deeper Magnet";
+        protected override int BaseCost => 340;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 6;
+        protected override void ApplyEffect() =>
+            Game(GameStat.MagnetDepth).AddModifier(new StatModifier(0.6f, StatModifierEffect.Add));
     }
 
     public class AutoMagnetUpgrade : Upgrade
@@ -146,9 +156,9 @@ namespace CraneMachine
         protected override string Name => "Max Items";
         protected override int BaseCost => 200;
         protected override float CostMultiplier => 1.65f;
-        protected override int MaxPurchases => 8;
+        protected override int MaxPurchases => 10;
         protected override void ApplyEffect() =>
-            Game(GameStat.MaxLiveItems).AddModifier(new StatModifier(4, StatModifierEffect.Add));
+            Game(GameStat.MaxLiveItems).AddModifier(new StatModifier(6, StatModifierEffect.Add));
     }
 
     #endregion
@@ -323,14 +333,14 @@ namespace CraneMachine
     public class UnlockMagnetUpgrade : ActivateObjectUpgrade
     {
         protected override string Name => "Magnet";
-        protected override int BaseCost => 100;
+        protected override int BaseCost => 1000;
         protected override UnlockTarget Target => UnlockTarget.Magnet;
     }
 
     public class UnlockConveyorUpgrade : ActivateObjectUpgrade
     {
         protected override string Name => "Conveyor Belt";
-        protected override int BaseCost => 550;
+        protected override int BaseCost => 2000;
         protected override UnlockTarget Target => UnlockTarget.Conveyor;
     }
 

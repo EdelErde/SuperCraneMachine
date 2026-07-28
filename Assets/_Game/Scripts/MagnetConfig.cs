@@ -33,10 +33,24 @@ namespace CraneMachine
         [Tooltip("Thin detection strip at the tip: how far below magnetTip it reaches. " +
                  "Keep small — this only decides when the magnet stops descending (on contact).")]
         public float detectionDepth = 0.2f;
-        [Tooltip("Pickup zone depth: how far below magnetTip the magnet grabs once engaged. " +
-                 "Larger than detectionDepth so it sweeps up items around the contact point.")]
+        [Tooltip("Pickup zone depth (fallback): how far below magnetTip the magnet grabs once engaged. " +
+                 "Overridden by the MagnetDepth stat when available.")]
         public float pickupDepth = 1.5f;
         [Tooltip("Stop descending when the top of the detection square is this far above a touched item.")]
         public float contactPadding = 0.05f;
+
+        [Header("Magnetic attraction")]
+        [Tooltip("Base pull strength toward the tip. Higher = snappier, harder to pull off.")]
+        public float attractForce = 40f;
+        [Tooltip("Softening distance for the inverse-distance falloff (avoids infinite force at the tip).")]
+        public float attractSoftening = 0.35f;
+        [Tooltip("Max pull force applied to a single item (clamps the inverse-distance spike).")]
+        public float attractMaxForce = 120f;
+        [Tooltip("Velocity damping on held items so they settle at the tip instead of orbiting.")]
+        public float holdDamping = 6f;
+        [Tooltip("If the player's drag force exceeds magnet pull by this factor, the item breaks free.")]
+        public float breakFreeFactor = 1.1f;
+        [Tooltip("Once an item is within this distance of the tip it counts as 'stuck' (for clumping).")]
+        public float stickDistance = 0.25f;
     }
 }

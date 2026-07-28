@@ -11,6 +11,8 @@ namespace CraneMachine
         protected abstract int BaseCost { get; }
         protected virtual float CostMultiplier => 1.5f;
         protected virtual int MaxPurchases => 0; 
+        int IUpgrade.MaxPurchases => MaxPurchases;
+        public int MaxPurchasesValue => MaxPurchases;
         protected virtual string Icon => null;
 
         public string DisplayName => Name;

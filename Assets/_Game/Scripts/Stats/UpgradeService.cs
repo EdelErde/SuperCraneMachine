@@ -26,6 +26,14 @@ namespace CraneMachine
         public UpgradeButton FindButton(Type upgradeType)
             => _buttons.TryGetValue(upgradeType, out var b) ? b : null;
 
+        // All upgrades currently registered via their buttons (for telemetry/export).
+        public IEnumerable<IUpgrade> AllUpgrades()
+        {
+            foreach (var b in _buttons.Values)
+                if (b != null && b.Upgrade != null)
+                    yield return b.Upgrade;
+        }
+
         private void Awake() => ServiceLocator.UpgradeService = this;
 
         private void Start() => StartCoroutine(SyncAfterRegistration());

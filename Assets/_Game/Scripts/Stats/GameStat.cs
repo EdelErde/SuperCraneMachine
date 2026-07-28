@@ -7,6 +7,7 @@ namespace CraneMachine
         MagnetVerticalSpeed,
         MagnetGrabCapacity,    // how many items the magnet can carry at once
         MagnetRange,           // side length (width) of the square magnet pickup zone (world units)
+        MagnetDepth,           // how far DOWN the magnet pickup zone reaches (world units)
         SpawnInterval,     // lower = faster rain
         MaxLiveItems,
         HandStrength,      // higher = drag heavier/faster without slipping
