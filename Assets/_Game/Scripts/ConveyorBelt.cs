@@ -23,6 +23,9 @@ namespace CraneMachine
         [Tooltip("Optional. Scrolls the sprite's texture to look like it's moving.")]
         [SerializeField] private SpriteRenderer beltSprite;
         [SerializeField] private float textureScrollScale = 1f;
+        
+        private MaterialPropertyBlock _mpb;
+        private static readonly int MainTexST = Shader.PropertyToID("_MainTex_ST");
 
         private readonly List<Rigidbody2D> _onBelt = new List<Rigidbody2D>();
         private float _scroll;
@@ -74,14 +77,11 @@ namespace CraneMachine
 
             foreach (var rb in _onBelt)
             {
-                // Don't fight the player: a held item ignores the belt.
                 var item = rb.GetComponent<Item>();
                 if (item != null && item.IsDragging) continue;
 
                 Vector2 v = rb.linearVelocity;
 
-                // Split velocity into along-belt and across-belt parts, and only
-                // steer the along-belt part so gravity and bouncing still work.
                 float along = Vector2.Dot(v, dir);
                 Vector2 across = v - dir * along;
 
@@ -90,8 +90,6 @@ namespace CraneMachine
             }
         }
 
-        // Stat-driven speed/grip. Serialized values are the fallback and set the
-        // sign of the direction (negative speed runs the belt the other way).
         private float SpeedValue =>
             ServiceLocator.StatService != null
                 ? Mathf.Sign(speed == 0 ? 1f : speed) * ServiceLocator.StatService.GameValue(GameStat.ConveyorSpeed)
@@ -106,11 +104,13 @@ namespace CraneMachine
         {
             if (beltSprite == null) return;
 
-            var mat = beltSprite.material;
-            if (mat == null || !mat.HasProperty(MainTex)) return;
-
             _scroll += SpeedValue * textureScrollScale * Time.deltaTime;
-            mat.SetTextureOffset(MainTex, new Vector2(-_scroll, 0f));
+            _scroll = Mathf.Repeat(_scroll, 1f);
+
+            if (_mpb == null) _mpb = new MaterialPropertyBlock();
+            beltSprite.GetPropertyBlock(_mpb);
+            _mpb.SetVector(MainTexST, new Vector4(1f, 1f, -_scroll, 0f));
+            beltSprite.SetPropertyBlock(_mpb);
         }
 
         private void OnDrawGizmosSelected()

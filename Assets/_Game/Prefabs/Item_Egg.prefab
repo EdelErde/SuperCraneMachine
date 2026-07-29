@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8716543840267490896}
   - component: {fileID: 3399656856746378456}
   - component: {fileID: 3087568818455658491}
+  - component: {fileID: 2046155717597800062}
   m_Layer: 0
   m_Name: Item_Egg
   m_TagString: Untagged
@@ -183,3 +184,15 @@ CircleCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_Radius: 0.5
+--- !u!114 &2046155717597800062
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 676983462849980093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ff67c17c4a1c704cb7fca1d6eea67b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemLandingParticles

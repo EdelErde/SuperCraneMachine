@@ -42,5 +42,10 @@ namespace CraneMachine
         public RectTransform Content => content;
         public string SetupScript => setupScript;
         public List<UpgradeGroupDefinition> Groups => groups;
+
+        private void Start()
+        {
+            gameObject.SetActive(false);
+        }
     }
 }

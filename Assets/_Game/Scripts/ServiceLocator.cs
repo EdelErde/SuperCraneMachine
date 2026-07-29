@@ -8,5 +8,6 @@ namespace CraneMachine
         public static ItemSpawner ItemSpawner;
         public static MagnetController Magnet;
         public static CursorManager CursorManager;
+        public static ParticleBurstPool Particles;
     }
 }
