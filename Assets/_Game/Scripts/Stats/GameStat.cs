@@ -17,6 +17,19 @@ namespace CraneMachine
         AutoMagnetInterval,// average seconds between automatic drops
         ConveyorSpeed,     // belt units per second
         ConveyorGrip,      // how fast items lock onto the belt
+
+        // Fuel economy
+        Fuel,              // current global fuel pool (uncapped)
+        FuelPerEgg,        // fuel produced per egg converted
+        FuelConvertRate,   // eggs converted per second by the converter
+
+        // Leaf blower
+        BlowPower,             // force strength applied to items in the blow zone
+        BlowFuelEfficiency,    // multiplier on blower fuel drain (higher = uses less)
+
+        // Sorting machine
+        SortFuelEfficiency,    // multiplier on sorter fuel drain (higher = uses less)
+        SortCapacity,          // how many items the sorter can buffer/process at once
     }
 
     public enum ItemStat

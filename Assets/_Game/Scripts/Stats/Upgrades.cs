@@ -34,9 +34,9 @@ namespace CraneMachine
 
     public class HandStrengthUpgrade : Upgrade
     {
-        protected override string Name => "Stronger Hands";
+        protected override string Name => "Stronger Ropes";
         protected override int BaseCost => 20;
-        protected override float CostMultiplier => 1.45f;
+        protected override float CostMultiplier => 2;
         protected override string Icon => "UpgradeIcons/Hand";
         protected override int MaxPurchases => 10;
         protected override void ApplyEffect() =>
@@ -45,7 +45,7 @@ namespace CraneMachine
 
     public class DragCountUpgrade : Upgrade
     {
-        protected override string Name => "Extra Hand";
+        protected override string Name => "Extra Rope";
         protected override int BaseCost => 80;
         protected override float CostMultiplier => 1.75f;
         protected override int MaxPurchases => 4;
@@ -349,6 +349,107 @@ namespace CraneMachine
         protected override string Name => "AutoSeller";
         protected override int BaseCost => 2650;
         protected override UnlockTarget Target => UnlockTarget.AutoSeller;
+    }
+
+    public class UnlockResourceHoleUpgrade : ActivateObjectUpgrade
+    {
+        protected override string Name => "Resource Hole";
+        protected override int BaseCost => 500;
+        protected override UnlockTarget Target => UnlockTarget.ResourceHole;
+    }
+
+    public class UnlockConverterUpgrade : ActivateObjectUpgrade
+    {
+        protected override string Name => "Egg Converter";
+        protected override int BaseCost => 750;
+        protected override UnlockTarget Target => UnlockTarget.ResourceConverter;
+    }
+
+    public class UnlockLeafBlowerUpgrade : ActivateObjectUpgrade
+    {
+        protected override string Name => "Leaf Blower";
+        protected override int BaseCost => 1200;
+        protected override UnlockTarget Target => UnlockTarget.LeafBlower;
+    }
+
+    public class UnlockSortingMachineUpgrade : ActivateObjectUpgrade
+    {
+        protected override string Name => "Sorting Machine";
+        protected override int BaseCost => 1600;
+        protected override UnlockTarget Target => UnlockTarget.SortingMachine;
+    }
+
+    #endregion
+
+    #region Fuel production
+
+    public class FuelPerEggUpgrade : Upgrade
+    {
+        protected override string Name => "Richer Eggs";
+        protected override int BaseCost => 220;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 6;
+        protected override void ApplyEffect() =>
+            Game(GameStat.FuelPerEgg).AddModifier(new StatModifier(0.5f, StatModifierEffect.Add));
+    }
+
+    public class FuelConvertRateUpgrade : Upgrade
+    {
+        protected override string Name => "Faster Conversion";
+        protected override int BaseCost => 300;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 6;
+        // +1 egg/min per level (rate is eggs/second).
+        protected override void ApplyEffect() =>
+            Game(GameStat.FuelConvertRate).AddModifier(new StatModifier(1f / 60f, StatModifierEffect.Add));
+    }
+
+    #endregion
+
+    #region Leaf blower
+
+    public class BlowPowerUpgrade : Upgrade
+    {
+        protected override string Name => "Stronger Blower";
+        protected override int BaseCost => 260;
+        protected override float CostMultiplier => 1.55f;
+        protected override int MaxPurchases => 6;
+        protected override void ApplyEffect() =>
+            Game(GameStat.BlowPower).AddModifier(new StatModifier(2f, StatModifierEffect.Add));
+    }
+
+    public class BlowEfficiencyUpgrade : Upgrade
+    {
+        protected override string Name => "Blower Efficiency";
+        protected override int BaseCost => 300;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 5;
+        protected override void ApplyEffect() =>
+            Game(GameStat.BlowFuelEfficiency).AddModifier(new StatModifier(0.4f, StatModifierEffect.Add));
+    }
+
+    #endregion
+
+    #region Sorting machine
+
+    public class SortEfficiencyUpgrade : Upgrade
+    {
+        protected override string Name => "Sorter Efficiency";
+        protected override int BaseCost => 320;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 5;
+        protected override void ApplyEffect() =>
+            Game(GameStat.SortFuelEfficiency).AddModifier(new StatModifier(0.4f, StatModifierEffect.Add));
+    }
+
+    public class SortCapacityUpgrade : Upgrade
+    {
+        protected override string Name => "Sorter Capacity";
+        protected override int BaseCost => 380;
+        protected override float CostMultiplier => 1.7f;
+        protected override int MaxPurchases => 5;
+        protected override void ApplyEffect() =>
+            Game(GameStat.SortCapacity).AddModifier(new StatModifier(2f, StatModifierEffect.Add));
     }
 
     #endregion

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace CraneMachine
 {
     [RequireComponent(typeof(Collider2D))]
-    public class ConveyorBelt : MonoBehaviour
+    public class ConveyorBelt : MonoBehaviour, IFuelConsumer
     {
         [Header("Motion")]
         [Tooltip("Belt speed in units per second. Negative runs it the other way.")]
@@ -23,14 +23,20 @@ namespace CraneMachine
         [Tooltip("Optional. Scrolls the sprite's texture to look like it's moving.")]
         [SerializeField] private SpriteRenderer beltSprite;
         [SerializeField] private float textureScrollScale = 1f;
-        
-        private MaterialPropertyBlock _mpb;
-        private static readonly int MainTexST = Shader.PropertyToID("_MainTex_ST");
+        [Tooltip("Optional rumble that plays while the belt is carrying items.")]
+        [SerializeField] private MachineRumble rumble;
 
+        [Header("Fuel")]
+        [Tooltip("Base fuel drained per second while items are on the belt. 0 = free (legacy).")]
+        [SerializeField] private float fuelPerSecond = 0.25f;
+        [Tooltip("If true and out of fuel, the belt stops moving items.")]
+        [SerializeField] private bool requiresFuel = true;
+        [Tooltip("Name shown for this belt in the production/fuel view.")]
+        [SerializeField] private string fuelLabel = "Conveyor";
+        
         private readonly List<Rigidbody2D> _onBelt = new List<Rigidbody2D>();
         private float _scroll;
-
-        private static readonly int MainTex = Shader.PropertyToID("_MainTex");
+        private bool _running;
 
         public float Speed
         {
@@ -39,6 +45,23 @@ namespace CraneMachine
         }
 
         private Vector2 WorldDirection => transform.TransformDirection(direction.normalized);
+
+        // ---- IFuelConsumer ----
+        public string FuelLabel => fuelLabel;
+        public float CurrentFuelDraw { get; private set; }
+
+        private void OnEnable()
+        {
+            if (ServiceLocator.FuelConsumers != null)
+                ServiceLocator.FuelConsumers.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            if (ServiceLocator.FuelConsumers != null)
+                ServiceLocator.FuelConsumers.Unregister(this);
+            CurrentFuelDraw = 0f;
+        }
 
         private void Reset()
         {
@@ -71,6 +94,27 @@ namespace CraneMachine
         {
             _onBelt.RemoveAll(rb => rb == null);
 
+            // Belt only works (and only burns fuel) while it's actually carrying something.
+            bool carrying = _onBelt.Count > 0;
+            bool powered = true;
+
+            if (carrying && requiresFuel && fuelPerSecond > 0f && ServiceLocator.FuelService != null)
+            {
+                float wanted = fuelPerSecond * Time.fixedDeltaTime;
+                float spent = ServiceLocator.FuelService.SpendUpTo(wanted);
+                powered = spent > 0f;
+                CurrentFuelDraw = powered ? fuelPerSecond : 0f;
+            }
+            else
+            {
+                CurrentFuelDraw = 0f;
+            }
+
+            _running = carrying && powered;
+            UpdateRumble();
+
+            if (!_running) return;
+
             Vector2 dir = WorldDirection;
             float beltSpeed = SpeedValue;
             float beltGrip = GripValue;
@@ -90,6 +134,11 @@ namespace CraneMachine
             }
         }
 
+        private void UpdateRumble()
+        {
+            if (rumble != null) rumble.SetActive(_running);
+        }
+
         private float SpeedValue =>
             ServiceLocator.StatService != null
                 ? Mathf.Sign(speed == 0 ? 1f : speed) * ServiceLocator.StatService.GameValue(GameStat.ConveyorSpeed)
@@ -104,13 +153,33 @@ namespace CraneMachine
         {
             if (beltSprite == null) return;
 
-            _scroll += SpeedValue * textureScrollScale * Time.deltaTime;
-            _scroll = Mathf.Repeat(_scroll, 1f);
+            // Only advance the scroll while the belt is actually running.
+            if (_running)
+            {
+                _scroll += SpeedValue * textureScrollScale * Time.deltaTime;
+                _scroll = Mathf.Repeat(_scroll, 1f);
+            }
 
-            if (_mpb == null) _mpb = new MaterialPropertyBlock();
-            beltSprite.GetPropertyBlock(_mpb);
-            _mpb.SetVector(MainTexST, new Vector4(1f, 1f, -_scroll, 0f));
-            beltSprite.SetPropertyBlock(_mpb);
+            ApplyScroll();
+        }
+
+        // The default Unity Sprite shader ignores _MainTex_ST set via a property block
+        // (sprite UVs are baked into the mesh), which is why belts didn't visibly scroll.
+        // Offsetting the *material's* main texture works with the standard material as long
+        // as the belt texture's Wrap Mode is set to Repeat. We use an instanced material so
+        // scrolling one belt never disturbs other sprites sharing the source material.
+        private Material _beltMat;
+        private void ApplyScroll()
+        {
+            if (_beltMat == null)
+            {
+                // .material returns an instance (safe to mutate per-renderer).
+                _beltMat = beltSprite.material;
+                if (_beltMat == null) return;
+            }
+
+            Vector2 offset = (Vector2)WorldDirection * -_scroll;
+            _beltMat.mainTextureOffset = offset;
         }
 
         private void OnDrawGizmosSelected()

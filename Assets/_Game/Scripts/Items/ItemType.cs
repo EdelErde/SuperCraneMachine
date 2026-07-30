@@ -69,7 +69,7 @@ namespace CraneMachine
     public class Diamond : ItemType
     {
         public override int BaseSellValue => 220;
-        public override float BaseMass => 0.8f;
+        public override float BaseMass => 1.2f;
         public override float SpawnWeight => 0.28f;
         public override bool StartsUnlocked => false;
     }

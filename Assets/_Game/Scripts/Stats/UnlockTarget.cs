@@ -5,5 +5,9 @@ namespace CraneMachine
         Conveyor,
         Magnet,
         AutoSeller,
+        ResourceHole,
+        ResourceConverter,
+        LeafBlower,
+        SortingMachine,
     }
 }

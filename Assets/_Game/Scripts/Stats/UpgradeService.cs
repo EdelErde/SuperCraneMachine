@@ -64,5 +64,13 @@ namespace CraneMachine
             => _purchases.TryGetValue(upgradeType, out var n) ? n : 0;
 
         public bool IsPurchased(Type upgradeType) => TimesPurchased(upgradeType) > 0;
+
+        // Total upgrade purchases across every upgrade (used for page-unlock gating).
+        public int TotalPurchases()
+        {
+            int total = 0;
+            foreach (var n in _purchases.Values) total += n;
+            return total;
+        }
     }
 }
