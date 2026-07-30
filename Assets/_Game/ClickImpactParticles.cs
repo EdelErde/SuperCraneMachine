@@ -5,13 +5,15 @@ using UnityEngine.InputSystem;
 
 namespace CraneMachine
 {
-    // Spawns a particle burst when you click on a surface that isn't a draggable item.
+    // Spawns a particle burst (and optional sound) when you click a surface that isn't a draggable item.
     public class ClickImpactParticles : MonoBehaviour
     {
         [SerializeField] private Camera cam;
         [Tooltip("Which layers count as a clickable surface (walls, background, etc.).")]
         [SerializeField] private LayerMask surfaceMask = ~0;
         [SerializeField] private float burstScale = 1f;
+        [Tooltip("Optional click sound. Leave empty for particles only.")]
+        [SerializeField] private SfxSource sfx;
 
         private void Awake()
         {
@@ -24,7 +26,6 @@ namespace CraneMachine
 
             Vector2 world = cam.ScreenToWorldPoint(PointerScreen());
 
-            // Ignore the click if it landed on a draggable item — that's a grab, not a wall hit.
             var overlap = Physics2D.OverlapPoint(world);
             if (overlap != null && overlap.GetComponentInParent<IDraggable>() != null) return;
 
@@ -33,6 +34,8 @@ namespace CraneMachine
 
             if (ServiceLocator.Particles != null)
                 ServiceLocator.Particles.Play(world, Vector2.up, burstScale);
+
+            if (sfx != null) sfx.Play();
         }
 
 #if ENABLE_INPUT_SYSTEM

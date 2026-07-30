@@ -9,5 +9,6 @@ namespace CraneMachine
         public static MagnetController Magnet;
         public static CursorManager CursorManager;
         public static ParticleBurstPool Particles;
+        public static AudioMixerController Audio;
     }
 }

@@ -43,8 +43,9 @@ namespace CraneMachine
         public string SetupScript => setupScript;
         public List<UpgradeGroupDefinition> Groups => groups;
 
-        private void Start()
+        private System.Collections.IEnumerator Start()
         {
+            yield return null;
             gameObject.SetActive(false);
         }
     }

@@ -3,16 +3,37 @@ using UnityEngine.UI;
 
 namespace CraneMachine
 {
-    // Plays a click when this Button is pressed. Put on any UI Button.
-    [RequireComponent(typeof(SfxSource))]
-    [RequireComponent(typeof(Button))]
     public class UiClickSfx : MonoBehaviour
     {
-        private SfxSource _sfx;
+        [SerializeField] private SfxSource sfx;
+        [Tooltip("Also catch buttons that get created/enabled after startup.")]
+        [SerializeField] private bool rescanOnEnable = true;
+
         private void Awake()
         {
-            _sfx = GetComponent<SfxSource>();
-            GetComponent<Button>().onClick.AddListener(_sfx.Play);
+            if (sfx == null) sfx = GetComponent<SfxSource>();
+            Wire();
+        }
+
+        private void OnEnable()
+        {
+            if (rescanOnEnable) Wire();
+        }
+
+        public void Wire()
+        {
+            if (sfx == null) return;
+
+            var buttons = Resources.FindObjectsOfTypeAll<Button>();
+            foreach (var b in buttons)
+            {
+                // Skip prefab assets / anything not in a loaded scene.
+                if (b == null || !b.gameObject.scene.IsValid()) continue;
+
+                // Remove first so repeated scans never stack duplicate calls.
+                b.onClick.RemoveListener(sfx.Play);
+                b.onClick.AddListener(sfx.Play);
+            }
         }
     }
 }

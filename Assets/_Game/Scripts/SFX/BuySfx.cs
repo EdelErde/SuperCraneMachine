@@ -24,10 +24,13 @@ namespace CraneMachine
 
         // Skip the one-shot sync event fired on the first frame.
         private void Start() => _ready = true;
+        private bool extraReady;
 
         private void OnChanged()
         {
-            if (_ready) _sfx.Play();
+            if (extraReady) _sfx.Play();
+            if (_ready) extraReady = true;
+
         }
     }
 }

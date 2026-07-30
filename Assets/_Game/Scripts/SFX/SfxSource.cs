@@ -1,9 +1,11 @@
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace CraneMachine
 {
     // Core SFX player. Add to any GameObject, assign clips, call Play().
     // Play() is public + parameterless, so it also works in a Button's OnClick.
+    // Assign 'output' (an SFX mixer group) so central volume control affects it.
     [RequireComponent(typeof(AudioSource))]
     public class SfxSource : MonoBehaviour
     {
@@ -12,6 +14,8 @@ namespace CraneMachine
         [SerializeField] private float pitchJitter = 0.05f;
         [Tooltip("Ignore repeat plays within this many seconds (0 = no limit).")]
         [SerializeField] private float minInterval = 0f;
+        [Tooltip("Route through this mixer group so central volume applies. Optional.")]
+        [SerializeField] private AudioMixerGroup output;
 
         private AudioSource _src;
         private float _next;
@@ -20,6 +24,7 @@ namespace CraneMachine
         {
             _src = GetComponent<AudioSource>();
             _src.playOnAwake = false;
+            if (output != null) _src.outputAudioMixerGroup = output;
         }
 
         public void Play()
