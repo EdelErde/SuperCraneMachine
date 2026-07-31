@@ -87,10 +87,44 @@ namespace CraneMachine
         public RectTransform TabBar => tabBar;
         public List<UpgradePageDefinition> Pages => pages;
 
-        private System.Collections.IEnumerator Start()
+        [Header("Startup")]
+        [Tooltip("Hide the whole view on startup (after initializing its buttons). The buy " +
+                 "window is usually opened by a button, so it starts hidden.")]
+        [SerializeField] private bool startHidden = true;
+
+        // Initialize every child button up front (even inactive ones), so they register with
+        // the UpgradeService immediately. This replaces the old 'stay active one frame so
+        // Start() runs, then hide' coroutine: registration no longer depends on Unity firing
+        // Start() on each button, so we can hide right away with no frame delay.
+        private void Awake()
         {
-            yield return null;
-            gameObject.SetActive(false);
+            InitializeContents();
+            if (startHidden)
+                gameObject.SetActive(false);
+        }
+
+        private void InitializeContents()
+        {
+            // Buttons first: they register with the service so gate/preview relationships
+            // resolve. Groups' visibility depends on their buttons' Visible state, so groups
+            // must initialize AFTER buttons.
+            var buttons = GetComponentsInChildren<UpgradeButton>(true);
+            for (int i = 0; i < buttons.Length; i++)
+                if (buttons[i] != null) buttons[i].Initialize();
+
+            // All buttons registered; resolve cross-button relationships once.
+            if (ServiceLocator.UpgradeService != null)
+                ServiceLocator.UpgradeService.NotifyChanged();
+
+            // Now initialize groups (and pages), which compute their visibility from buttons.
+            var groups = GetComponentsInChildren<UpgradeGroup>(true);
+            for (int i = 0; i < groups.Length; i++)
+                if (groups[i] != null) groups[i].Initialize();
+
+            // Finally the pager: it selects the first page and refreshes tabs, and depends on
+            // buttons/groups above already being resolved. Last so the first open is complete.
+            var pager = GetComponentInChildren<UpgradePager>(true);
+            if (pager != null) pager.Initialize();
         }
     }
 }

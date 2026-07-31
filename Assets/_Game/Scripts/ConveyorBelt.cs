@@ -121,6 +121,8 @@ namespace CraneMachine
 
             foreach (var rb in _onBelt)
             {
+                if (rb == null) continue; // destroyed this frame
+
                 var item = rb.GetComponent<Item>();
                 if (item != null && item.IsDragging) continue;
 

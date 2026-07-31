@@ -1,6 +1,5 @@
 ﻿using System;
 using NekoLab.Stats;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace CraneMachine
@@ -9,6 +8,7 @@ namespace CraneMachine
     // Fuel is kept inside the stat system (GameStat.Fuel) so upgrades and other
     // systems can read it uniformly, but spend/gain go through here so the HUD and
     // machines get a single change event and a single set of rules.
+    [DefaultExecutionOrder(-100)]
     public class FuelService : MonoBehaviour
     {
         public event Action<float> OnFuelChanged;   // new total
@@ -23,7 +23,6 @@ namespace CraneMachine
 
         public bool Has(float amount) => CurrentFuel >= amount;
 
-        [Button]
         public void Add(float amount)
         {
             if (amount <= 0f) return;

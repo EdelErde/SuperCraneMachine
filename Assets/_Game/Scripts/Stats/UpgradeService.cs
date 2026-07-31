@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace CraneMachine
 {
+    [DefaultExecutionOrder(-100)]
     public class UpgradeService : MonoBehaviour
     {
         private readonly Dictionary<Type, int> _purchases = new Dictionary<Type, int>();
@@ -36,21 +37,43 @@ namespace CraneMachine
 
         private void Awake() => ServiceLocator.UpgradeService = this;
 
-        private void Start() => StartCoroutine(SyncAfterRegistration());
-
-        private System.Collections.IEnumerator SyncAfterRegistration()
-        {
-            yield return new WaitForEndOfFrame();
-            OnUpgradesChanged?.Invoke();
-        }
+        // Broadcast that the set of upgrades/buttons may have changed. Views call this after
+        // they finish registering their buttons, so cross-button gate/preview relationships
+        // resolve without waiting a frame.
+        public void NotifyChanged() => OnUpgradesChanged?.Invoke();
 
         public bool CanAfford(IUpgrade upgrade)
-            => !upgrade.MaxedOut && ServiceLocator.StatService.Has(upgrade.CurrentCost);
+        {
+            if (upgrade.MaxedOut) return false;
+            if (!ServiceLocator.StatService.Has(upgrade.CurrentCost)) return false;
+            if (upgrade.CurrentFuelCost > 0)
+            {
+                var fuel = ServiceLocator.FuelService;
+                if (fuel == null || !fuel.Has(upgrade.CurrentFuelCost)) return false;
+            }
+            return true;
+        }
 
         public bool TryBuy(IUpgrade upgrade)
         {
             if (upgrade.MaxedOut) return false;
+
+            int fuelCost = upgrade.CurrentFuelCost;
+            var fuel = ServiceLocator.FuelService;
+
+            // Check fuel availability BEFORE spending money, so we never take money and then
+            // fail on fuel.
+            if (fuelCost > 0 && (fuel == null || !fuel.Has(fuelCost))) return false;
+
             if (!ServiceLocator.StatService.TrySpend(upgrade.CurrentCost)) return false;
+
+            // Money is spent; fuel was pre-checked, so this should succeed. Guard anyway.
+            if (fuelCost > 0 && !fuel.TrySpend(fuelCost))
+            {
+                // Refund money if fuel somehow failed (e.g. drained same frame).
+                ServiceLocator.StatService.AddMoney(upgrade.CurrentCost);
+                return false;
+            }
 
             upgrade.Apply();
             _purchases.TryGetValue(upgrade.GetType(), out var n);

@@ -108,12 +108,11 @@ namespace CraneMachine
 
             var item = other.GetComponentInParent<Item>();
             if (item == null || _known.Contains(item)) return;
-            if (_buffer.Count >= Capacity) return; // full: let it pass through / pile up
+            if (_buffer.Count >= Capacity) return;
 
             _known.Add(item);
-            item.OnDragEnd(); // ensure it's not being dragged as we take control
-
-            // Park it (disable physics interactions while buffered).
+            item.OnDragEnd();
+            
             var rb = item.GetComponent<Rigidbody2D>();
             if (rb != null) rb.simulated = false;
             item.gameObject.SetActive(true);
@@ -124,11 +123,12 @@ namespace CraneMachine
 
         private void Update()
         {
+            PurgeDestroyed();
+
             bool working = _buffer.Count > 0;
 
             if (working)
             {
-                // Drain fuel while holding items (efficiency reduces the cost).
                 CurrentFuelDraw = fuelPerSecond / FuelEfficiency;
                 if (ServiceLocator.FuelService != null)
                     ServiceLocator.FuelService.SpendUpTo(CurrentFuelDraw * Time.deltaTime);
@@ -153,8 +153,15 @@ namespace CraneMachine
             if (rumble != null) rumble.SetActive(_buffer.Count > 0);
         }
 
-        // Fuel units per second this machine is currently drawing (0 when idle).
-        // Exposed so the production view can show per-machine consumption.
+        private void PurgeDestroyed()
+        {
+            for (int i = _buffer.Count - 1; i >= 0; i--)
+                if (_buffer[i] == null || _buffer[i].item == null)
+                    _buffer.RemoveAt(i);
+
+            _known.RemoveWhere(it => it == null);
+        }
+
         public float CurrentFuelDraw { get; private set; }
 
         private void Release(Item item, bool fuel)
@@ -171,19 +178,15 @@ namespace CraneMachine
             if (rb != null)
             {
                 rb.simulated = true;
-                Vector2 dir = point.right; // exit points face their release direction
+                Vector2 dir = point.right;
                 rb.linearVelocity = dir * ejectSpeed;
             }
 
             if (sortSfx != null) sortSfx.Play();
         }
 
-        // ---- Clicking the machine opens its config window ----
-        // Uses Unity's built-in collider click (needs a non-trigger-agnostic Collider2D on
-        // this object). Self-contained so it needs no changes to the drag controller.
         private void OnMouseDown()
         {
-            // Ignore clicks that land on UI.
             if (UnityEngine.EventSystems.EventSystem.current != null &&
                 UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
                 return;

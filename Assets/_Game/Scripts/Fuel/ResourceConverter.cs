@@ -4,13 +4,14 @@ using UnityEngine;
 
 namespace CraneMachine
 {
-    // The "Production Window" from the mockup: eggs are dropped in and slowly turned
-    // into fuel at a configurable rate (mockup shows "1/min", batch "5x").
-    //
-    // KISS: one converter, one recipe (Egg -> Fuel) driven by stats, so upgrades tune it.
-    // Open for extension: swap/add recipes by implementing IResourceRecipe.
     public class ResourceConverter : MonoBehaviour
     {
+        [Header("Display")]
+        [Tooltip("Recipe title shown on the production card, e.g. 'Egg \u2192 Fuel'.")]
+        [SerializeField] private string recipeTitle = "Egg \u2192 Fuel";
+        [Tooltip("Name of the resource this produces, e.g. 'Fuel'. For labels/tooltips.")]
+        [SerializeField] private string outputName = "Fuel";
+
         [Tooltip("Which item type this converter accepts. Others are ignored (left for other holes).")]
         [SerializeReference] private ItemType accepts = new Egg();
 
@@ -21,17 +22,36 @@ namespace CraneMachine
         [SerializeField] private SfxSource acceptSfx;
         [SerializeField] private SfxSource produceSfx;
 
-        // Items waiting to be converted.
+        [Header("Debug")]
+        [Tooltip("Log accepts/conversions to the Console to diagnose the pipeline.")]
+        [SerializeField] private bool debugLog = false;
+
         private int _queued;
-        private float _progress; // 0..1 toward the next conversion tick
+        private float _progress;
 
         public int Queued => _queued;
         public float Progress => Mathf.Clamp01(_progress);
         public ItemType Accepts => accepts;
+        public int BatchSize => Mathf.Max(1, batchSize);
+        public string RecipeTitle => recipeTitle;
+        public string OutputName => outputName;
+
+        public float RatePerMinute => RatePerSecond * 60f;
+
+        private void OnEnable()
+        {
+            if (ServiceLocator.ResourceConverters != null)
+                ServiceLocator.ResourceConverters.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            if (ServiceLocator.ResourceConverters != null)
+                ServiceLocator.ResourceConverters.Unregister(this);
+        }
 
         public event Action OnChanged;
 
-        // Eggs converted per second (from stats). Mockup default: 1 per minute.
         private float RatePerSecond =>
             ServiceLocator.StatService != null
                 ? Mathf.Max(0f, ServiceLocator.StatService.GameValue(GameStat.FuelConvertRate))
@@ -42,7 +62,6 @@ namespace CraneMachine
                 ? Mathf.Max(0f, ServiceLocator.StatService.GameValue(GameStat.FuelPerEgg))
                 : 1f;
 
-        // Called by ResourceHole when a matching item is dropped in.
         public void Accept(Item item)
         {
             if (item == null) return;
@@ -50,9 +69,10 @@ namespace CraneMachine
             bool matches = accepts != null && item.type != null &&
                            item.type.GetType() == accepts.GetType();
 
-            if (!matches) return; // let other holes/systems handle non-matching items
+            if (!matches) return;
 
             _queued++;
+            if (debugLog) Debug.Log($"[Converter] accepted {item.type.GetType().Name}; queued={_queued}", this);
             if (acceptSfx != null) acceptSfx.Play();
             OnChanged?.Invoke();
             Destroy(item.gameObject);
@@ -66,7 +86,6 @@ namespace CraneMachine
             float rate = RatePerSecond;
             if (rate <= 0f) return;
 
-            // Each full unit of progress converts one item.
             _progress += rate * Time.deltaTime;
 
             int converted = 0;
@@ -80,6 +99,7 @@ namespace CraneMachine
             if (converted > 0)
             {
                 ServiceLocator.FuelService.Add(FuelPerItem * converted);
+                if (debugLog) Debug.Log($"[Converter] converted {converted}; queued={_queued}; +{FuelPerItem * converted} fuel", this);
                 if (produceSfx != null) produceSfx.Play();
                 OnChanged?.Invoke();
             }

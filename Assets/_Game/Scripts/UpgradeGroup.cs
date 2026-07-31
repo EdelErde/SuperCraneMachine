@@ -11,20 +11,31 @@ namespace CraneMachine
 
         public RectTransform ButtonParent => buttonParent;
 
+        private bool _initialized;
+
         public void SetTitle(string text)
         {
             if (title != null) title.text = text;
         }
 
-        private void Start()
+        // Idempotent setup: subscribe + first refresh. Callable by the parent view before this
+        // object is active (Start doesn't run on inactive objects, which is why the view drives
+        // this explicitly). Start calls it as a fallback for standalone use.
+        public void Initialize()
         {
+            if (_initialized) return;
+            _initialized = true;
+
             if (ServiceLocator.UpgradeService != null)
                 ServiceLocator.UpgradeService.OnUpgradesChanged += Refresh;
             Refresh();
         }
 
+        private void Start() => Initialize();
+
         private void OnDestroy()
         {
+            if (!_initialized) return;
             if (ServiceLocator.UpgradeService != null)
                 ServiceLocator.UpgradeService.OnUpgradesChanged -= Refresh;
         }

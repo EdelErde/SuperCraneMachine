@@ -7,6 +7,8 @@ using UnityEngine;
 
 namespace CraneMachine
 {
+    // Services initialize before views/buttons so ServiceLocator is populated in time.
+    [DefaultExecutionOrder(-100)]
     public class StatService : MonoBehaviour
     {
         public event Action<int> OnMoneyChanged;

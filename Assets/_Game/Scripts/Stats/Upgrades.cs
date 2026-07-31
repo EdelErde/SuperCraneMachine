@@ -34,9 +34,9 @@ namespace CraneMachine
 
     public class HandStrengthUpgrade : Upgrade
     {
-        protected override string Name => "Stronger Ropes";
+        protected override string Name => "Stronger Hands";
         protected override int BaseCost => 20;
-        protected override float CostMultiplier => 2;
+        protected override float CostMultiplier => 1.45f;
         protected override string Icon => "UpgradeIcons/Hand";
         protected override int MaxPurchases => 10;
         protected override void ApplyEffect() =>
@@ -45,7 +45,7 @@ namespace CraneMachine
 
     public class DragCountUpgrade : Upgrade
     {
-        protected override string Name => "Extra Rope";
+        protected override string Name => "Extra Hand";
         protected override int BaseCost => 80;
         protected override float CostMultiplier => 1.75f;
         protected override int MaxPurchases => 4;
@@ -353,16 +353,12 @@ namespace CraneMachine
 
     public class UnlockResourceHoleUpgrade : ActivateObjectUpgrade
     {
-        protected override string Name => "Resource Hole";
-        protected override int BaseCost => 500;
+        // Unlocks the whole fuel-production setup: the resource hole AND the egg converter.
+        // Both scene objects share the ResourceHole unlock target, so this single upgrade
+        // reveals them together (SceneRef.SetActive toggles every object under a target).
+        protected override string Name => "Fuel Production";
+        protected override int BaseCost => 600;
         protected override UnlockTarget Target => UnlockTarget.ResourceHole;
-    }
-
-    public class UnlockConverterUpgrade : ActivateObjectUpgrade
-    {
-        protected override string Name => "Egg Converter";
-        protected override int BaseCost => 750;
-        protected override UnlockTarget Target => UnlockTarget.ResourceConverter;
     }
 
     public class UnlockLeafBlowerUpgrade : ActivateObjectUpgrade
@@ -413,6 +409,7 @@ namespace CraneMachine
         protected override string Name => "Stronger Blower";
         protected override int BaseCost => 260;
         protected override float CostMultiplier => 1.55f;
+        protected override int BaseFuelCost => 5;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
             Game(GameStat.BlowPower).AddModifier(new StatModifier(2f, StatModifierEffect.Add));
@@ -423,6 +420,7 @@ namespace CraneMachine
         protected override string Name => "Blower Efficiency";
         protected override int BaseCost => 300;
         protected override float CostMultiplier => 1.6f;
+        protected override int BaseFuelCost => 5;
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
             Game(GameStat.BlowFuelEfficiency).AddModifier(new StatModifier(0.4f, StatModifierEffect.Add));

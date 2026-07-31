@@ -3,6 +3,7 @@ namespace CraneMachine
     public interface IUpgrade
     {
         int CurrentCost { get; }
+        int CurrentFuelCost { get; }
         bool MaxedOut { get; }
         string Label { get; }
         string DisplayName { get; }

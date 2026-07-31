@@ -80,7 +80,7 @@ namespace CraneMachine
         }
 
         private void Render()
-            => _label.text = string.Format(format, Mathf.RoundToInt(_shown));
+            => _label.text = string.Format(format, NumberFormat.Abbreviate(_shown));
 
         private void UpdatePop()
         {

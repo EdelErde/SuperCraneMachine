@@ -98,6 +98,8 @@ namespace CraneMachine
                     Vector2 dir = WorldDirection;
                     foreach (var rb in _inZone)
                     {
+                        if (rb == null) continue; // destroyed this frame
+
                         var item = rb.GetComponent<Item>();
                         if (item != null && item.IsDragging) continue;
 

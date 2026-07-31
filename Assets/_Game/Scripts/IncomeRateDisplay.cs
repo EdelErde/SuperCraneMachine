@@ -94,7 +94,7 @@ namespace CraneMachine
         {
             return value < decimalThreshold
                 ? value.ToString("0.0")
-                : Mathf.RoundToInt(value).ToString();
+                : NumberFormat.Abbreviate(value);
         }
 
         private void UpdatePop()

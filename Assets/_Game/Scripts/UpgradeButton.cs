@@ -19,6 +19,10 @@ namespace CraneMachine
         [Header("UI")]
         [SerializeField] private TextMeshProUGUI label;
         [SerializeField] private TextMeshProUGUI costLabel;
+        [Tooltip("Second price line shown below the money cost when the upgrade also costs fuel.")]
+        [SerializeField] private TextMeshProUGUI fuelCostLabel;
+        [Tooltip("Format for the fuel cost line. {0} = fuel amount.")]
+        [SerializeField] private string fuelCostFormat = "Fuel {0}";
         [SerializeField] private Image icon;
         [SerializeField] private Color affordableColor = Color.white;
         [SerializeField] private Color unaffordableColor = new Color(0.5f, 0.5f, 0.5f);
@@ -54,7 +58,8 @@ namespace CraneMachine
             if (upgrade == null) return;
 
             if (label != null) label.text = upgrade.DisplayName;
-            if (costLabel != null) costLabel.text = $"${upgrade.CurrentCost}";
+            if (costLabel != null) costLabel.text = NumberFormat.Money(upgrade.CurrentCost);
+            UpdateFuelCostLabel();
 
             if (icon != null && !string.IsNullOrEmpty(upgrade.IconPath))
             {
@@ -64,14 +69,26 @@ namespace CraneMachine
         }
 
         private Button _button;
+        private bool _initialized;
 
         private void Awake() => _button = GetComponent<Button>();
 
-        private void Start()
+        // Idempotent setup: registers listeners + the button with the service and does a
+        // first refresh. Safe to call from a parent view before the object is active (which
+        // is why this is not just Start) — and Start calls it as a fallback for hand-placed
+        // buttons that no view initializes.
+        public void Initialize()
         {
+            if (_initialized) return;
+            _initialized = true;
+
+            if (_button == null) _button = GetComponent<Button>();
+
             _button.onClick.AddListener(OnClick);
             if (ServiceLocator.StatService != null)
                 ServiceLocator.StatService.OnMoneyChanged += OnMoneyChanged;
+            if (ServiceLocator.FuelService != null)
+                ServiceLocator.FuelService.OnFuelChanged += OnFuelChanged;
             if (ServiceLocator.UpgradeService != null)
             {
                 ServiceLocator.UpgradeService.RegisterButton(this);
@@ -80,11 +97,17 @@ namespace CraneMachine
             Refresh();
         }
 
+        private void Start() => Initialize();
+
         private void OnDestroy()
         {
+            if (!_initialized) return;
+
             _button.onClick.RemoveListener(OnClick);
             if (ServiceLocator.StatService != null)
                 ServiceLocator.StatService.OnMoneyChanged -= OnMoneyChanged;
+            if (ServiceLocator.FuelService != null)
+                ServiceLocator.FuelService.OnFuelChanged -= OnFuelChanged;
             if (ServiceLocator.UpgradeService != null)
             {
                 ServiceLocator.UpgradeService.UnregisterButton(this);
@@ -100,6 +123,7 @@ namespace CraneMachine
         }
 
         private void OnMoneyChanged(int _) => Refresh();
+        private void OnFuelChanged(float _) => Refresh();
 
         public bool Unlocked =>
             unlockedBy == null ||
@@ -142,7 +166,8 @@ namespace CraneMachine
 
             if (label != null) label.text = upgrade.Label;
             if (costLabel != null)
-                costLabel.text = upgrade.MaxedOut ? "MAX" : $"${upgrade.CurrentCost}";
+                costLabel.text = upgrade.MaxedOut ? "MAX" : NumberFormat.Money(upgrade.CurrentCost);
+            UpdateFuelCostLabel();
             if (icon != null) icon.color = Color.white;
 
             RefreshPips();
@@ -206,12 +231,33 @@ namespace CraneMachine
                 costLabel.text = string.Format(previewCostFormat, gateName, requiredLevel);
             }
 
+            if (fuelCostLabel != null) fuelCostLabel.gameObject.SetActive(false);
+
             if (icon != null) icon.color = previewIconColor;
 
             var colors = _button.colors;
             colors.normalColor = previewColor;
             colors.disabledColor = previewColor;
             _button.colors = colors;
+        }
+
+        // Shows/hides the second price line. Only visible when the upgrade actually costs
+        // fuel and isn't maxed. Tinted red when the player can't currently afford the fuel.
+        private void UpdateFuelCostLabel()
+        {
+            if (fuelCostLabel == null) return;
+
+            int fuelCost = upgrade != null ? upgrade.CurrentFuelCost : 0;
+            bool show = fuelCost > 0 && upgrade != null && !upgrade.MaxedOut;
+
+            fuelCostLabel.gameObject.SetActive(show);
+            if (!show) return;
+
+            fuelCostLabel.text = string.Format(fuelCostFormat, NumberFormat.Abbreviate(fuelCost));
+
+            var fuel = ServiceLocator.FuelService;
+            bool haveFuel = fuel != null && fuel.Has(fuelCost);
+            fuelCostLabel.color = haveFuel ? affordableColor : unaffordableColor;
         }
     }
 }

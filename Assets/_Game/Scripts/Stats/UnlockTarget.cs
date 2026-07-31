@@ -6,7 +6,6 @@ namespace CraneMachine
         Magnet,
         AutoSeller,
         ResourceHole,
-        ResourceConverter,
         LeafBlower,
         SortingMachine,
     }

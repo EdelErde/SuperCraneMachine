@@ -54,6 +54,10 @@ namespace CraneMachine
                 for (int i = _held.Count - 1; i >= 0; i--)
                 {
                     var d = _held[i];
+                    // A held item may have been destroyed (e.g. consumed by a hole). Check the
+                    // underlying Unity object BEFORE touching d.Transform, since accessing a
+                    // member on a destroyed MonoBehaviour throws MissingReferenceException.
+                    if (d is UnityEngine.Object obj && obj == null) { _held.RemoveAt(i); continue; }
                     if (d.Transform == null || !d.IsDragging)
                         _held.RemoveAt(i);
                 }
@@ -158,7 +162,10 @@ namespace CraneMachine
         private void ReleaseAll()
         {
             foreach (var d in _held)
+            {
+                if (d is UnityEngine.Object obj && obj == null) continue;
                 if (d.Transform != null) d.OnDragEnd();
+            }
             _held.Clear();
         }
 

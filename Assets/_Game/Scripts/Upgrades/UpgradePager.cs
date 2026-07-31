@@ -22,9 +22,15 @@ namespace CraneMachine
         [SerializeField] private Transform tabParent;
 
         private int _current = -1;
+        private bool _initialized;
 
-        private void Start()
+        // Idempotent setup. The view calls this in Awake (before the window is shown), so the
+        // pages/tabs are fully resolved on the very first open. Start calls it as a fallback.
+        public void Initialize()
         {
+            if (_initialized) return;
+            _initialized = true;
+
             AutoDiscover();
             BindTabs();
 
@@ -35,8 +41,11 @@ namespace CraneMachine
             RefreshTabs();
         }
 
+        private void Start() => Initialize();
+
         private void OnDestroy()
         {
+            if (!_initialized) return;
             if (ServiceLocator.UpgradeService != null)
                 ServiceLocator.UpgradeService.OnUpgradesChanged -= OnUpgradesChanged;
         }
