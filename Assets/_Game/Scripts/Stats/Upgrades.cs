@@ -451,4 +451,17 @@ namespace CraneMachine
     }
 
     #endregion
+
+    #region Final
+
+    // The last upgrade. Its only effect is to switch on the "You finished the game!"
+    // popup object in the scene (any object tagged with a SceneRef of UnlockTarget.WinScreen).
+    public class FinalUpgrade : ActivateObjectUpgrade
+    {
+        protected override string Name => "The End";
+        protected override int BaseCost => 1000000;
+        protected override UnlockTarget Target => UnlockTarget.WinScreen;
+    }
+
+    #endregion
 }

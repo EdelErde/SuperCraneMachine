@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace CraneMachine
 {
@@ -33,13 +34,21 @@ namespace CraneMachine
             }
         }
 
+        private void OnEnable()
+        {
+            if (!wind.isPlaying) wind.Play();
+        }
+
         private void Update()
         {
             if (wind == null || !_hasEmission) return;
 
             bool blowing = _blower != null && _blower.IsBlowing;
             if (_emission.enabled != blowing)
+            {
                 _emission.enabled = blowing;
+                wind.Play();
+            }
 
             if (blowing && alignToBlowDirection)
             {

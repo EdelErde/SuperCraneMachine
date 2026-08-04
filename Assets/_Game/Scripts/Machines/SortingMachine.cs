@@ -10,7 +10,7 @@ namespace CraneMachine
     //
     // Entry / exit points are colliders/transforms placed in the scene so they can be
     // configured spatially (per the brief). This component only decides + moves items.
-    public class SortingMachine : MonoBehaviour, IWorldInteractable, IFuelConsumer
+    public class SortingMachine : MonoBehaviour, IWorldInteractable, IFuelConsumer, IToggleableMachine
     {
         public Transform Transform => transform;
 
@@ -31,12 +31,18 @@ namespace CraneMachine
         [SerializeField] private float processTime = 0.35f;
         [Tooltip("Speed items are ejected out of an exit.")]
         [SerializeField] private float ejectSpeed = 2f;
+        [Tooltip("Extra impulse force pushed in the exit direction on release, on top of the eject speed. 0 = velocity only.")]
+        [SerializeField] private float ejectForce = 3f;
 
         [Header("Fuel")]
         [Tooltip("Base fuel drained per second while the machine holds any items.")]
         [SerializeField] private float fuelPerSecond = 0.3f;
         [Tooltip("Name shown for this machine in the production/fuel view.")]
         [SerializeField] private string fuelLabel = "Sorting Machine";
+
+        [Header("Power")]
+        [Tooltip("Whether the machine starts switched on.")]
+        [SerializeField] private bool startEnabled = true;
 
         [Header("SFX (optional)")]
         [SerializeField] private SfxSource intakeSfx;
@@ -79,10 +85,30 @@ namespace CraneMachine
         private void Awake()
         {
             if (entry == null) entry = GetComponent<Collider2D>();
+            _enabled = startEnabled;
         }
 
         // ---- IFuelConsumer ----
         public string FuelLabel => fuelLabel;
+
+        // ---- IToggleableMachine ----
+        private bool _enabled = true;
+
+        public string ToggleLabel => fuelLabel;
+
+        public event System.Action<bool> OnToggled;
+
+        public bool MachineEnabled
+        {
+            get => _enabled;
+            set
+            {
+                if (_enabled == value) return;
+                _enabled = value;
+                if (!_enabled) CurrentFuelDraw = 0f;
+                OnToggled?.Invoke(_enabled);
+            }
+        }
 
         private void OnEnable()
         {
@@ -106,6 +132,8 @@ namespace CraneMachine
                 // on the body collider. When entry == body collider this check is skipped.
             }
 
+            if (!_enabled) return; // switched off: don't take items in
+
             var item = other.GetComponentInParent<Item>();
             if (item == null || _known.Contains(item)) return;
             if (_buffer.Count >= Capacity) return;
@@ -124,6 +152,24 @@ namespace CraneMachine
         private void Update()
         {
             PurgeDestroyed();
+
+            // Switched off: behave like it's out of fuel — release everything through
+            // hole A immediately and draw nothing.
+            if (!_enabled)
+            {
+                if (_buffer.Count > 0)
+                {
+                    for (int i = _buffer.Count - 1; i >= 0; i--)
+                    {
+                        var p = _buffer[i];
+                        if (p.item != null) Release(p.item, fuel: false);
+                        _buffer.RemoveAt(i);
+                    }
+                }
+                CurrentFuelDraw = 0f;
+                if (rumble != null) rumble.SetActive(false);
+                return;
+            }
 
             bool working = _buffer.Count > 0;
 
@@ -180,19 +226,11 @@ namespace CraneMachine
                 rb.simulated = true;
                 Vector2 dir = point.right;
                 rb.linearVelocity = dir * ejectSpeed;
+                if (ejectForce > 0f)
+                    rb.AddForce(dir * ejectForce, ForceMode2D.Impulse);
             }
 
             if (sortSfx != null) sortSfx.Play();
-        }
-
-        private void OnMouseDown()
-        {
-            if (UnityEngine.EventSystems.EventSystem.current != null &&
-                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
-                return;
-
-            var window = SortingConfigWindow.Instance;
-            if (window != null) window.Open(this);
         }
 
         private void OnDrawGizmosSelected()

@@ -43,6 +43,23 @@ namespace CraneMachine
 
         private void Start() => Initialize();
 
+        // Re-run selection + tab refresh. Called by the view each time the window opens, so
+        // the first open matches later opens (the pager itself can't use OnEnable, since it
+        // lives on an object that stays active while only the parent panel toggles).
+        public void Refresh()
+        {
+            if (!_initialized) { Initialize(); return; }
+
+            // Keep the current page if it's still valid & unlocked; otherwise pick the first.
+            if (_current >= 0 && _current < pages.Count &&
+                pages[_current] != null && pages[_current].IsUnlocked)
+                Select(_current);
+            else
+                SelectFirstUnlocked();
+
+            RefreshTabs();
+        }
+
         private void OnDestroy()
         {
             if (!_initialized) return;

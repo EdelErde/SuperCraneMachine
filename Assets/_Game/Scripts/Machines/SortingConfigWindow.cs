@@ -1,25 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace CraneMachine
 {
-    // Runtime window for configuring a SortingMachine's routing.
-    // The player picks item types and a ratio (0..1) that should go to hole B; the rest
-    // goes to hole A. One row per item type is spawned from a simple row prefab.
-    //
-    // KISS: a single shared window; Open(machine) rebinds it to whichever machine was clicked.
     public class SortingConfigWindow : MonoBehaviour
     {
         public static SortingConfigWindow Instance { get; private set; }
 
         [Header("Wiring")]
-        [SerializeField] private GameObject root;               // panel to show/hide
-        [SerializeField] private RectTransform rowParent;       // where rows spawn
-        [SerializeField] private SortingConfigRow rowPrefab;    // row: label + slider + value
+        [SerializeField] private GameObject root;
+        [SerializeField] private RectTransform rowParent; 
+        [SerializeField] private SortingConfigRow rowPrefab;
         [SerializeField] private TextMeshProUGUI titleLabel;
-        [SerializeField] private Button closeButton;
 
         [Tooltip("Source of item types to list. Falls back to the spawner's database.")]
         [SerializeField] private ItemDatabase database;
@@ -28,33 +23,22 @@ namespace CraneMachine
         [SerializeField] private bool unlockedOnly = true;
 
         private readonly List<SortingConfigRow> _rows = new List<SortingConfigRow>();
-        private SortingMachine _machine;
+        [SerializeField] private SortingMachine _machine;
 
         private void Awake()
         {
             Instance = this;
             if (root != null) root.SetActive(false);
-            if (closeButton != null) closeButton.onClick.AddListener(Close);
+        }
+
+        private void OnEnable()
+        {
+            Rebuild();
         }
 
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
-            if (closeButton != null) closeButton.onClick.RemoveListener(Close);
-        }
-
-        public void Open(SortingMachine machine)
-        {
-            _machine = machine;
-            if (root != null) root.SetActive(true);
-            if (titleLabel != null) titleLabel.text = "Sorting  →  Hole B";
-            Rebuild();
-        }
-
-        public void Close()
-        {
-            if (root != null) root.SetActive(false);
-            _machine = null;
         }
 
         private ItemDatabase ResolveDatabase()
@@ -89,8 +73,6 @@ namespace CraneMachine
             }
         }
 
-        // Pull the item icon off the prefab: UI Image first, then a world SpriteRenderer.
-        // Mirrors ItemDatabase's own sprite lookup so rows match the rest of the UI.
         private static Sprite SpriteOf(GameObject prefab)
         {
             if (prefab == null) return null;

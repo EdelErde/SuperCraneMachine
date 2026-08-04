@@ -18,7 +18,12 @@ namespace CraneMachine
     [Serializable]
     public class SortingConfig
     {
-        [SerializeField] private List<SortRule> rules = new List<SortRule>();
+        // Starts with eggs split 50/50 between hole A and hole B. Cleared/overwritten
+        // as soon as the player edits the config in-game.
+        [SerializeField] private List<SortRule> rules = new List<SortRule>
+        {
+            new SortRule { type = new Egg(), ratioToB = 0.5f },
+        };
 
         public IReadOnlyList<SortRule> Rules => rules;
 

@@ -54,10 +54,9 @@ namespace CraneMachine
             _game.RegisterStat(GameStat.ConveyorSpeed, 2f);
             _game.RegisterStat(GameStat.ConveyorGrip, 12f);
 
-            // Fuel economy
             _game.RegisterStat(GameStat.Fuel, 0f);
             _game.RegisterStat(GameStat.FuelPerEgg, 1f);
-            _game.RegisterStat(GameStat.FuelConvertRate, 1f / 60f); // 1 egg per minute (see mockup "1/min")
+            _game.RegisterStat(GameStat.FuelConvertRate, 1f / 30f);
 
             // Leaf blower
             _game.RegisterStat(GameStat.BlowPower, 6f);

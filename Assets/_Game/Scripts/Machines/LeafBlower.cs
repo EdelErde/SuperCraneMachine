@@ -9,7 +9,7 @@ namespace CraneMachine
     //
     // Follows the ConveyorBelt pattern: track rigidbodies in a trigger, act in FixedUpdate.
     [RequireComponent(typeof(Collider2D))]
-    public class LeafBlower : MonoBehaviour, IFuelConsumer
+    public class LeafBlower : MonoBehaviour, IFuelConsumer, IToggleableMachine
     {
         [Header("Blow")]
         [Tooltip("Direction the blower pushes, in local space.")]
@@ -24,6 +24,10 @@ namespace CraneMachine
         [SerializeField] private float fuelPerSecond = 0.5f;
         [Tooltip("Name shown for this blower in the production/fuel view.")]
         [SerializeField] private string fuelLabel = "Leaf Blower";
+
+        [Header("Power")]
+        [Tooltip("Whether the blower starts switched on.")]
+        [SerializeField] private bool startEnabled = true;
 
         [Header("Filter")]
         [SerializeField] private LayerMask affectedLayers = ~0;
@@ -80,7 +84,7 @@ namespace CraneMachine
 
             bool blowing = false;
 
-            if (_inZone.Count > 0 && ServiceLocator.FuelService != null)
+            if (_enabled && _inZone.Count > 0 && ServiceLocator.FuelService != null)
             {
                 // Fuel drain scales with how many items we're actually pushing this step.
                 float wanted = fuelPerSecond / FuelEfficiency * Time.fixedDeltaTime;
@@ -133,8 +137,42 @@ namespace CraneMachine
         // ---- IFuelConsumer ----
         public string FuelLabel => fuelLabel;
 
+        // ---- IToggleableMachine ----
+        private bool _enabled = true;
+        private bool _initialised;
+
+        public string ToggleLabel => fuelLabel;
+
+        public event System.Action<bool> OnToggled;
+
+        public bool MachineEnabled
+        {
+            get => _enabled;
+            set
+            {
+                if (_enabled == value) return;
+                _enabled = value;
+                if (!_enabled)
+                {
+                    IsBlowing = false;
+                    CurrentFuelDraw = 0f;
+                }
+                OnToggled?.Invoke(_enabled);
+            }
+        }
+
+        private void Awake()
+        {
+            _enabled = startEnabled;
+            _initialised = true;
+        }
+
         private void OnEnable()
         {
+            // Honour the serialized start state the first time (Awake may not have run
+            // yet on the very first enable in edit-play transitions).
+            if (!_initialised) { _enabled = startEnabled; _initialised = true; }
+
             if (ServiceLocator.FuelConsumers != null)
                 ServiceLocator.FuelConsumers.Register(this);
         }
