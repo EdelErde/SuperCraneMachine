@@ -4,7 +4,7 @@ using UnityEngine;
 namespace CraneMachine
 {
     [RequireComponent(typeof(Collider2D))]
-    public class ConveyorBelt : MonoBehaviour, IFuelConsumer
+    public class ConveyorBelt : MonoBehaviour, IFuelConsumer, IToggleableMachine
     {
         [Header("Motion")]
         [Tooltip("Belt speed in units per second. Negative runs it the other way.")]
@@ -33,6 +33,10 @@ namespace CraneMachine
         [SerializeField] private bool requiresFuel = true;
         [Tooltip("Name shown for this belt in the production/fuel view.")]
         [SerializeField] private string fuelLabel = "Conveyor";
+
+        [Header("Power")]
+        [Tooltip("Whether the belt starts switched on.")]
+        [SerializeField] private bool startEnabled = true;
         
         private readonly List<Rigidbody2D> _onBelt = new List<Rigidbody2D>();
         private float _scroll;
@@ -50,8 +54,41 @@ namespace CraneMachine
         public string FuelLabel => fuelLabel;
         public float CurrentFuelDraw { get; private set; }
 
+        // ---- IToggleableMachine ----
+        private bool _enabled = true;
+        private bool _initialised;
+
+        public string ToggleLabel => fuelLabel;
+
+        public event System.Action<bool> OnToggled;
+
+        public bool MachineEnabled
+        {
+            get => _enabled;
+            set
+            {
+                if (_enabled == value) return;
+                _enabled = value;
+                if (!_enabled)
+                {
+                    _running = false;
+                    CurrentFuelDraw = 0f;
+                    UpdateRumble();
+                }
+                OnToggled?.Invoke(_enabled);
+            }
+        }
+
+        private void Awake()
+        {
+            _enabled = startEnabled;
+            _initialised = true;
+        }
+
         private void OnEnable()
         {
+            if (!_initialised) { _enabled = startEnabled; _initialised = true; }
+
             if (ServiceLocator.FuelConsumers != null)
                 ServiceLocator.FuelConsumers.Register(this);
         }
@@ -94,8 +131,9 @@ namespace CraneMachine
         {
             _onBelt.RemoveAll(rb => rb == null);
 
-            // Belt only works (and only burns fuel) while it's actually carrying something.
-            bool carrying = _onBelt.Count > 0;
+            // Belt only works (and only burns fuel) while it's actually carrying
+            // something AND it's switched on.
+            bool carrying = _enabled && _onBelt.Count > 0;
             bool powered = true;
 
             if (carrying && requiresFuel && fuelPerSecond > 0f && ServiceLocator.FuelService != null)
@@ -165,17 +203,11 @@ namespace CraneMachine
             ApplyScroll();
         }
 
-        // The default Unity Sprite shader ignores _MainTex_ST set via a property block
-        // (sprite UVs are baked into the mesh), which is why belts didn't visibly scroll.
-        // Offsetting the *material's* main texture works with the standard material as long
-        // as the belt texture's Wrap Mode is set to Repeat. We use an instanced material so
-        // scrolling one belt never disturbs other sprites sharing the source material.
         private Material _beltMat;
         private void ApplyScroll()
         {
             if (_beltMat == null)
             {
-                // .material returns an instance (safe to mutate per-renderer).
                 _beltMat = beltSprite.material;
                 if (_beltMat == null) return;
             }

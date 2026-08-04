@@ -3,13 +3,6 @@ using UnityEngine;
 
 namespace CraneMachine
 {
-    // A machine you feed items into (via the entry collider). Each item is buffered
-    // (up to SortCapacity) and then routed to one of two exit points, A or B, according
-    // to the per-machine SortingConfig. Routing costs fuel; with no fuel EVERYTHING
-    // drops through hole A.
-    //
-    // Entry / exit points are colliders/transforms placed in the scene so they can be
-    // configured spatially (per the brief). This component only decides + moves items.
     public class SortingMachine : MonoBehaviour, IWorldInteractable, IFuelConsumer, IToggleableMachine
     {
         public Transform Transform => transform;
@@ -33,6 +26,15 @@ namespace CraneMachine
         [SerializeField] private float ejectSpeed = 2f;
         [Tooltip("Extra impulse force pushed in the exit direction on release, on top of the eject speed. 0 = velocity only.")]
         [SerializeField] private float ejectForce = 3f;
+
+        [Header("Eject direction")]
+        [Tooltip("Direction items are launched from exit A, in the machine's LOCAL space. " +
+                 "(1,0)=right, (-1,0)=left, (0,1)=up, (0,-1)=down, or any diagonal. " +
+                 "Leave at (0,0) to use exit A's own 'right' axis instead.")]
+        [SerializeField] private Vector2 ejectDirA = new Vector2(0f, -1f);
+        [Tooltip("Direction items are launched from exit B, in the machine's LOCAL space. " +
+                 "Leave at (0,0) to use exit B's own 'right' axis instead.")]
+        [SerializeField] private Vector2 ejectDirB = new Vector2(0f, -1f);
 
         [Header("Fuel")]
         [Tooltip("Base fuel drained per second while the machine holds any items.")]
@@ -125,14 +127,14 @@ namespace CraneMachine
 
         private void OnTriggerEnter2D(Collider2D other)
         {
-            // Only react to the entry collider (allows a dedicated child entry).
+
             if (entry != null && other.IsTouching(entry) == false && entry != GetComponent<Collider2D>())
             {
                 // If a dedicated entry is set and it's not this collider, ignore direct hits
                 // on the body collider. When entry == body collider this check is skipped.
             }
 
-            if (!_enabled) return; // switched off: don't take items in
+            if (!_enabled) return;
 
             var item = other.GetComponentInParent<Item>();
             if (item == null || _known.Contains(item)) return;
@@ -140,10 +142,11 @@ namespace CraneMachine
 
             _known.Add(item);
             item.OnDragEnd();
-            
+
             var rb = item.GetComponent<Rigidbody2D>();
             if (rb != null) rb.simulated = false;
-            item.gameObject.SetActive(true);
+
+            SetItemVisible(item, false);
 
             _buffer.Add(new Pending { item = item, readyAt = Time.time + processTime });
             if (intakeSfx != null) intakeSfx.Play();
@@ -153,8 +156,6 @@ namespace CraneMachine
         {
             PurgeDestroyed();
 
-            // Switched off: behave like it's out of fuel — release everything through
-            // hole A immediately and draw nothing.
             if (!_enabled)
             {
                 if (_buffer.Count > 0)
@@ -220,11 +221,13 @@ namespace CraneMachine
 
             item.transform.position = point.position;
 
+            SetItemVisible(item, true);
+
             var rb = item.GetComponent<Rigidbody2D>();
             if (rb != null)
             {
                 rb.simulated = true;
-                Vector2 dir = point.right;
+                Vector2 dir = EjectDirection(exit, point);
                 rb.linearVelocity = dir * ejectSpeed;
                 if (ejectForce > 0f)
                     rb.AddForce(dir * ejectForce, ForceMode2D.Impulse);
@@ -233,12 +236,48 @@ namespace CraneMachine
             if (sortSfx != null) sortSfx.Play();
         }
 
+        private Vector2 EjectDirection(SortExit exit, Transform point)
+        {
+            Vector2 local = exit == SortExit.B ? ejectDirB : ejectDirA;
+
+            if (local.sqrMagnitude < 0.0001f)
+                return point != null ? (Vector2)point.right : Vector2.right;
+
+            return (Vector2)transform.TransformDirection(local.normalized);
+        }
+
+        private static void SetItemVisible(Item item, bool visible)
+        {
+            if (item == null) return;
+            var renderers = item.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+                if (renderers[i] != null) renderers[i].enabled = visible;
+        }
+
         private void OnDrawGizmosSelected()
         {
-            Gizmos.color = Color.green;
-            if (exitA != null) Gizmos.DrawWireSphere(exitA.position, 0.12f);
-            Gizmos.color = Color.cyan;
-            if (exitB != null) Gizmos.DrawWireSphere(exitB.position, 0.12f);
+            DrawExitGizmo(exitA, SortExit.A, Color.green);
+            DrawExitGizmo(exitB, SortExit.B, Color.cyan);
+        }
+
+        private void DrawExitGizmo(Transform point, SortExit exit, Color color)
+        {
+            if (point == null) return;
+
+            Gizmos.color = color;
+            Vector3 origin = point.position;
+            Gizmos.DrawWireSphere(origin, 0.12f);
+
+            Vector3 dir = (Vector3)EjectDirection(exit, point);
+            float len = 0.6f;
+            Vector3 tip = origin + dir * len;
+            Gizmos.DrawLine(origin, tip);
+
+            // Simple 2D arrowhead.
+            Vector3 back = dir * -0.15f;
+            Vector3 side = new Vector3(-dir.y, dir.x, 0f) * 0.1f;
+            Gizmos.DrawLine(tip, tip + back + side);
+            Gizmos.DrawLine(tip, tip + back - side);
         }
     }
 }

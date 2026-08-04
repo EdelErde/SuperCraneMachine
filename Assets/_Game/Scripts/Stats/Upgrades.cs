@@ -409,7 +409,6 @@ namespace CraneMachine
         protected override string Name => "Stronger Blower";
         protected override int BaseCost => 260;
         protected override float CostMultiplier => 1.55f;
-        protected override int BaseFuelCost => 5;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
             Game(GameStat.BlowPower).AddModifier(new StatModifier(2f, StatModifierEffect.Add));
@@ -420,7 +419,6 @@ namespace CraneMachine
         protected override string Name => "Blower Efficiency";
         protected override int BaseCost => 300;
         protected override float CostMultiplier => 1.6f;
-        protected override int BaseFuelCost => 5;
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
             Game(GameStat.BlowFuelEfficiency).AddModifier(new StatModifier(0.4f, StatModifierEffect.Add));
@@ -459,7 +457,7 @@ namespace CraneMachine
     public class FinalUpgrade : ActivateObjectUpgrade
     {
         protected override string Name => "The End";
-        protected override int BaseCost => 1000000;
+        protected override int BaseCost => 100000;
         protected override UnlockTarget Target => UnlockTarget.WinScreen;
     }
 
