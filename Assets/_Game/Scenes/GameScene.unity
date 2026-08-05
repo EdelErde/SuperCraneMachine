@@ -20738,6 +20738,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1537952081}
   - component: {fileID: 1537952082}
+  - component: {fileID: 1537952083}
   m_Layer: 0
   m_Name: LeafBlower
   m_TagString: Untagged
@@ -20777,6 +20778,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.SceneRef
   target: 4
   disableOnAwake: 1
+--- !u!114 &1537952083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1537952080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55b8645021eafa2419d7afd72cfafbba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.MachineOffVisuals
+  machineSource: {fileID: 1532016969}
+  colliders:
+  - {fileID: 1245223244}
+  - {fileID: 1532016970}
+  sprites:
+  - {fileID: 1245223243}
+  offOpacity: 0.4
 --- !u!224 &1538552283 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1861079464730815795, guid: 22f9717b8dca9b14b979098ce17090b5, type: 3}
@@ -23552,6 +23572,7 @@ GameObject:
   - component: {fileID: 1852525199}
   - component: {fileID: 1852525203}
   - component: {fileID: 1852525204}
+  - component: {fileID: 1852525205}
   m_Layer: 0
   m_Name: SortingMachine
   m_TagString: Untagged
@@ -23747,6 +23768,27 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 0.64, y: 1.25}
   m_EdgeRadius: 0
+--- !u!114 &1852525205
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1852525197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55b8645021eafa2419d7afd72cfafbba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.MachineOffVisuals
+  machineSource: {fileID: 1852525199}
+  colliders:
+  - {fileID: 1852525204}
+  sprites:
+  - {fileID: 1852525202}
+  - {fileID: 965496710}
+  - {fileID: 397553206}
+  - {fileID: 1076964411}
+  offOpacity: 0.4
 --- !u!224 &1870430464 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5185840634846898295, guid: d176deb9992023e41adcb48b8a7162eb, type: 3}
@@ -24176,6 +24218,7 @@ GameObject:
   - component: {fileID: 1921759811}
   - component: {fileID: 1921759810}
   - component: {fileID: 1921759813}
+  - component: {fileID: 1921759814}
   m_Layer: 0
   m_Name: Conveyor
   m_TagString: Untagged
@@ -24536,6 +24579,25 @@ MonoBehaviour:
   amplitude: 0.03
   frequency: 40
   responsiveness: 12
+--- !u!114 &1921759814
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1921759803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55b8645021eafa2419d7afd72cfafbba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.MachineOffVisuals
+  machineSource: {fileID: 0}
+  colliders:
+  - {fileID: 1921759807}
+  - {fileID: 1921759809}
+  sprites:
+  - {fileID: 1921759808}
+  offOpacity: 0.4
 --- !u!224 &1932795634 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5185840634846898295, guid: d176deb9992023e41adcb48b8a7162eb, type: 3}
