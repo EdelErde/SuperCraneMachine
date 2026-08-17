@@ -73,4 +73,15 @@ namespace CraneMachine
         public override float SpawnWeight => 0.28f;
         public override bool StartsUnlocked => false;
     }
+
+    // Produced only by the Fuel Filter (never rains from the spawner — SpawnWeight is
+    // always 0 regardless of upgrades). Carried by hand or by drone into the Fuel
+    // Funnel, which converts it into the shared fuel pool.
+    [Serializable]
+    public class Fuel : ItemType
+    {
+        public override int BaseSellValue => 0;
+        public override float BaseMass => 0.2f;
+        public override float SpawnWeight => 0f;
+    }
 }

@@ -450,6 +450,33 @@ namespace CraneMachine
 
     #endregion
 
+    #region Fuel filter
+
+    // Lowers processing time (seconds per item) — negative Add modifier, unlike most
+    // upgrades where higher is better. FuelFilter floors the stat at 0.05s so this can
+    // never reach zero/negative regardless of how many times it's purchased.
+    public class FuelFilterSpeedUpgrade : Upgrade
+    {
+        protected override string Name => "Filter Speed";
+        protected override int BaseCost => 300;
+        protected override float CostMultiplier => 1.6f;
+        protected override int MaxPurchases => 5;
+        protected override void ApplyEffect() =>
+            Game(GameStat.FuelFilterProcessTime).AddModifier(new StatModifier(-0.2f, StatModifierEffect.Add));
+    }
+
+    public class FuelFilterCapacityUpgrade : Upgrade
+    {
+        protected override string Name => "Filter Capacity";
+        protected override int BaseCost => 360;
+        protected override float CostMultiplier => 1.7f;
+        protected override int MaxPurchases => 5;
+        protected override void ApplyEffect() =>
+            Game(GameStat.FuelFilterCapacity).AddModifier(new StatModifier(2f, StatModifierEffect.Add));
+    }
+
+    #endregion
+
     #region Final
 
     // The last upgrade. Its only effect is to switch on the "You finished the game!"

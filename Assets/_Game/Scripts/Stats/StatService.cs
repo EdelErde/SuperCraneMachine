@@ -18,6 +18,14 @@ namespace CraneMachine
         public int CurrentMoney => _money;
         public bool Has(int amount) => _money >= amount;
 
+        // Lifetime running totals — only ever increase, unlike CurrentMoney/Fuel which
+        // can drop when spent. Intended for unlock conditions ("reach X total money
+        // earned") where a spendable balance would be an unstable trigger.
+        private int _totalMoneyEarned;
+        private float _totalFuelProduced;
+        public int TotalMoneyEarned => _totalMoneyEarned;
+        public float TotalFuelProduced => _totalFuelProduced;
+
         private readonly StatContainer<GameStat> _game = new StatContainer<GameStat>();
 
         private readonly Dictionary<Type, StatContainer<ItemStat>> _items =
@@ -65,6 +73,10 @@ namespace CraneMachine
             // Sorting machine
             _game.RegisterStat(GameStat.SortFuelEfficiency, 1f);
             _game.RegisterStat(GameStat.SortCapacity, 4f);
+
+            // Fuel filter
+            _game.RegisterStat(GameStat.FuelFilterProcessTime, 1.5f);
+            _game.RegisterStat(GameStat.FuelFilterCapacity, 4f);
         }
 
         private void RegisterItemStats()
@@ -96,8 +108,16 @@ namespace CraneMachine
         {
             if (amount <= 0) return;
             _money += amount;
+            _totalMoneyEarned += amount;
             OnMoneyEarned?.Invoke(amount);
             OnMoneyChanged?.Invoke(_money);
+        }
+
+        // Called by FuelService whenever fuel is added to the pool, so the lifetime
+        // total tracks production regardless of how much is later spent on upgrades.
+        public void NotifyFuelProduced(float amount)
+        {
+            if (amount > 0f) _totalFuelProduced += amount;
         }
 
         public bool TrySpend(int amount)

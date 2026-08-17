@@ -110,10 +110,19 @@ namespace CraneMachine
             for (int i = 0; i < count; i++)
             {
                 var d = _hits[i].GetComponentInParent<IDraggable>();
-                if (d != null && d.CanDrag) { inRange = true; break; }
+                if (d != null && d.CanDrag && !IsPickupBlocked(d)) { inRange = true; break; }
             }
 
             ServiceLocator.CursorManager.Set(inRange ? CursorState.Hover : CursorState.Default);
+        }
+
+        // True if this draggable is an Item whose type is currently blocked via the
+        // Pickup Filter panel. Non-Item draggables (if any) are never blocked.
+        private static bool IsPickupBlocked(IDraggable d)
+        {
+            if (ServiceLocator.PickupFilter == null) return false;
+            var item = d as Item;
+            return item != null && ServiceLocator.PickupFilter.IsBlocked(item.type);
         }
 
         private Vector2 _lastPickPoint;
@@ -136,6 +145,7 @@ namespace CraneMachine
             {
                 var d = _hits[i].GetComponentInParent<IDraggable>();
                 if (d == null || !d.CanDrag || _held.Contains(d)) continue;
+                if (IsPickupBlocked(d)) continue;
                 if (!_candidates.Contains(d)) _candidates.Add(d);
             }
 

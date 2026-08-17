@@ -25,6 +25,8 @@ namespace CraneMachine
         {
             if (amount <= 0f) return;
             SetTo(CurrentFuel + amount);
+            if (ServiceLocator.StatService != null)
+                ServiceLocator.StatService.NotifyFuelProduced(amount);
             OnFuelGained?.Invoke(amount);
         }
 

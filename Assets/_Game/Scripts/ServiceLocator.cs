@@ -7,7 +7,8 @@ namespace CraneMachine
         public static SellService SellService;
         public static FuelService FuelService;
         public static FuelConsumerRegistry FuelConsumers;
-        public static ResourceConverterRegistry ResourceConverters;
+        public static PickupFilterService PickupFilter;
+        public static ScreenUnlockService ScreenUnlocks;
         public static ItemSpawner ItemSpawner;
         public static MagnetController Magnet;
         public static CursorManager CursorManager;

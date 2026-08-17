@@ -30,6 +30,10 @@ namespace CraneMachine
         // Sorting machine
         SortFuelEfficiency,    // multiplier on sorter fuel drain (higher = uses less)
         SortCapacity,          // how many items the sorter can buffer/process at once
+
+        // Fuel filter (item -> Fuel item)
+        FuelFilterProcessTime, // seconds a queued item takes to become a Fuel item (lower = faster)
+        FuelFilterCapacity,    // how many items the filter can buffer/process at once
     }
 
     public enum ItemStat

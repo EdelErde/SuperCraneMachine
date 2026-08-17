@@ -4,26 +4,24 @@ using UnityEngine;
 
 namespace CraneMachine
 {
-    // One routing rule: "send this item type to hole B with probability 'ratioToB'".
-    // ratioToB = 1 -> always B, 0 -> always A. The remainder goes to A.
+    // One routing rule: "send this item type to hole <exit>, always."
+    // Replaces the old probabilistic ratioToB slider — the Sorter Dialog now assigns
+    // each item type wholly to one side by dragging its icon into the A or B list.
     [Serializable]
     public class SortRule
     {
         [SerializeReference] public ItemType type = new Egg();
-        [Range(0f, 1f)] public float ratioToB = 1f;
+        public SortExit exit = SortExit.A;
     }
 
-    // Per-machine sorting configuration the player edits via the config window.
-    // Any item type without a rule (or when out of fuel) routes to hole A.
+    // Per-machine sorting configuration the player edits via the world-space Sorter
+    // Dialog. Any item type without a rule (or when out of fuel) routes to hole A.
     [Serializable]
     public class SortingConfig
     {
-        // Starts with eggs split 50/50 between hole A and hole B. Cleared/overwritten
-        // as soon as the player edits the config in-game.
-        [SerializeField] private List<SortRule> rules = new List<SortRule>
-        {
-            new SortRule { type = new Egg(), ratioToB = 0.5f },
-        };
+        // Starts empty -> every item type routes to hole A (the default/drop-through
+        // exit) until the player drags it to hole B in the dialog.
+        [SerializeField] private List<SortRule> rules = new List<SortRule>();
 
         public IReadOnlyList<SortRule> Rules => rules;
 
@@ -38,23 +36,29 @@ namespace CraneMachine
             return null;
         }
 
-        // Set (or create) the B-ratio for an item type. ratio is clamped 0..1.
-        public void SetRatio(ItemType type, float ratio)
+        // Assign an item type wholly to an exit.
+        public void SetExit(ItemType type, SortExit exit)
         {
             if (type == null) return;
-            ratio = Mathf.Clamp01(ratio);
 
             var rule = GetRule(type.GetType());
             if (rule == null)
             {
-                rule = new SortRule { type = type, ratioToB = ratio };
+                rule = new SortRule { type = type, exit = exit };
                 rules.Add(rule);
             }
             else
             {
-                rule.ratioToB = ratio;
+                rule.exit = exit;
             }
             OnChanged?.Invoke();
+        }
+
+        // Which exit an item type is currently assigned to (A if no rule yet).
+        public SortExit ExitFor(Type itemType)
+        {
+            var rule = GetRule(itemType);
+            return rule != null ? rule.exit : SortExit.A;
         }
 
         public void RemoveRule(Type itemType)
@@ -68,11 +72,7 @@ namespace CraneMachine
         public SortExit Decide(Type itemType, bool hasFuel)
         {
             if (!hasFuel) return SortExit.A;
-
-            var rule = GetRule(itemType);
-            if (rule == null) return SortExit.A;
-
-            return UnityEngine.Random.value < rule.ratioToB ? SortExit.B : SortExit.A;
+            return ExitFor(itemType);
         }
     }
 
