@@ -5,6 +5,9 @@ namespace CraneMachine
     [RequireComponent(typeof(Collider2D))]
     public class DestroyZone : MonoBehaviour
     {
+        // For SfxManager.
+        public event System.Action OnItemDestroyed;
+
         private void Reset()
         {
             GetComponent<Collider2D>().isTrigger = true;
@@ -14,7 +17,10 @@ namespace CraneMachine
         {
             var item = other.GetComponentInParent<Item>();
             if (item != null)
+            {
+                OnItemDestroyed?.Invoke();
                 Destroy(item.gameObject);
+            }
         }
     }
 }

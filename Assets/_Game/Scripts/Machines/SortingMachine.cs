@@ -46,13 +46,14 @@ namespace CraneMachine
         [Tooltip("Whether the machine starts switched on.")]
         [SerializeField] private bool startEnabled = true;
 
-        [Header("SFX (optional)")]
-        [SerializeField] private SfxSource intakeSfx;
-        [SerializeField] private SfxSource sortSfx;
-
         [Header("Feedback (optional)")]
         [Tooltip("Rumble that plays while the machine is processing items.")]
         [SerializeField] private MachineRumble rumble;
+
+        // SFX lives in the dedicated SFX/ components (see SortingMachineSfx), which
+        // listen to these events rather than the machine owning sound config itself.
+        public event System.Action OnIntake;
+        public event System.Action OnSorted;
 
         public SortingConfig Config => config;
 
@@ -149,7 +150,7 @@ namespace CraneMachine
             SetItemVisible(item, false);
 
             _buffer.Add(new Pending { item = item, readyAt = Time.time + processTime });
-            if (intakeSfx != null) intakeSfx.Play();
+            OnIntake?.Invoke();
         }
 
         private void Update()
@@ -233,7 +234,7 @@ namespace CraneMachine
                     rb.AddForce(dir * ejectForce, ForceMode2D.Impulse);
             }
 
-            if (sortSfx != null) sortSfx.Play();
+            OnSorted?.Invoke();
         }
 
         private Vector2 EjectDirection(SortExit exit, Transform point)

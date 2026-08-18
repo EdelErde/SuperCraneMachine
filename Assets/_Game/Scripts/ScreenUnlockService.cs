@@ -30,7 +30,23 @@ namespace CraneMachine
 
         public event System.Action<ScreenId> OnScreenUnlocked;
 
-        private void Awake() => ServiceLocator.ScreenUnlocks = this;
+        private void Awake()
+        {
+            ServiceLocator.ScreenUnlocks = this;
+
+            // Any ScreenId with no rule in 'rules' has no unlock condition at all —
+            // treat it as unlocked from the start (this is how you mark a screen as
+            // "always available", e.g. your starting screen: just don't give it a
+            // rule). Only screens that actually have a rule targeting them start
+            // locked, pending that rule's conditions.
+            var ruled = new HashSet<ScreenId>();
+            if (rules != null)
+                foreach (var rule in rules)
+                    if (rule != null) ruled.Add(rule.screen);
+
+            foreach (ScreenId screen in System.Enum.GetValues(typeof(ScreenId)))
+                if (!ruled.Contains(screen)) _unlocked.Add(screen);
+        }
 
         private void OnDestroy()
         {

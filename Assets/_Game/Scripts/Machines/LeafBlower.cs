@@ -32,14 +32,7 @@ namespace CraneMachine
         [Header("Filter")]
         [SerializeField] private LayerMask affectedLayers = ~0;
 
-        [Header("SFX (optional)")]
-        [Tooltip("Looping/one-shot source played while actively blowing.")]
-        [SerializeField] private SfxSource blowSfx;
-        [Tooltip("Minimum seconds between blow SFX plays.")]
-        [SerializeField] private float sfxInterval = 0.4f;
-
         private readonly List<Rigidbody2D> _inZone = new List<Rigidbody2D>();
-        private float _nextSfx;
 
         private Vector2 WorldDirection => transform.TransformDirection(direction.normalized);
 
@@ -116,8 +109,6 @@ namespace CraneMachine
 
                         rb.AddForce(dir * f);
                     }
-
-                    PlaySfx();
                 }
             }
 
@@ -183,14 +174,6 @@ namespace CraneMachine
                 ServiceLocator.FuelConsumers.Unregister(this);
             IsBlowing = false;
             CurrentFuelDraw = 0f;
-        }
-
-        private void PlaySfx()
-        {
-            if (blowSfx == null) return;
-            if (Time.time < _nextSfx) return;
-            _nextSfx = Time.time + Mathf.Max(0f, sfxInterval);
-            blowSfx.Play();
         }
 
         private void OnDrawGizmosSelected()

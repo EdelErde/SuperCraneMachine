@@ -3,7 +3,8 @@ using UnityEngine;
 namespace CraneMachine
 {
     // Continuous roll/scrape loop whose volume tracks the item's speed. Put on the Item prefab.
-    // Uses its own looping AudioSource (separate from SfxSource one-shots).
+    // Uses its own looping AudioSource (a continuous, parameter-driven sound — not a
+    // one-shot, so it doesn't go through the pooled SfxManager/SoundDef system).
     [RequireComponent(typeof(Rigidbody2D))]
     public class ItemMovementSfx : MonoBehaviour
     {

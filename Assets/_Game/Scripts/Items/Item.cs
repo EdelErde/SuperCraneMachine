@@ -7,6 +7,11 @@ namespace CraneMachine
     {
         [SerializeReference] public ItemType type = new Egg();
 
+        // For SfxManager — fires on hard-enough collisions (impact sound). Static
+        // because SfxManager needs one subscription point covering every item, not
+        // per-instance management for potentially hundreds of live items.
+        public static event System.Action<Item, float> OnImpact;
+
         [Header("Drag feel")]
         [SerializeField] private DragConfig config = new DragConfig();
 
@@ -88,6 +93,11 @@ namespace CraneMachine
             Vector2 toTarget = desired - _rb.position;
             Vector2 force = toTarget * dragForce - _rb.linearVelocity * dragDamping;
             _rb.AddForce(force);
+        }
+
+        private void OnCollisionEnter2D(Collision2D c)
+        {
+            OnImpact?.Invoke(this, c.relativeVelocity.magnitude);
         }
     }
 }
