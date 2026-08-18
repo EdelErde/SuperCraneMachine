@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 7272042978235656174}
   - component: {fileID: 130738413773188664}
   - component: {fileID: 248757596034970716}
-  - component: {fileID: 3792553814307870614}
   m_Layer: 6
   m_Name: Fuel
   m_TagString: Untagged
@@ -31,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -13.35, y: -5.5, z: 0}
-  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -62,7 +61,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
+  - {fileID: 2100000, guid: acd1dc586b1d66d4e940fecf7d8e4644, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -184,17 +183,3 @@ CircleCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_Radius: 0.5
---- !u!114 &3792553814307870614
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2914722954158262460}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 780fafee5d3baca4095e00cb1d71eef3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp-firstpass::MetaballLiquid2D.MetaballBlob
-  fieldIntensity: 1
-  fieldColor: {r: 0.103773594, g: 0.103773594, b: 0.103773594, a: 1}
