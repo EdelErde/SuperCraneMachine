@@ -19,8 +19,9 @@ namespace CraneMachine
         [Tooltip("Layers that items live on (leave as Everything if unsure).")]
         [SerializeField] private LayerMask itemLayers = ~0;
 
-        [Header("SFX (optional)")]
-        [SerializeField] private SfxSource funnelSfx;
+        // SFX lives in the dedicated SFX/ components (see FuelFunnelSfx), which listen
+        // to this event rather than the funnel owning sound config itself.
+        public event System.Action OnFunneled;
 
         private Collider2D _col;
         private readonly Collider2D[] _overlap = new Collider2D[16];
@@ -66,7 +67,7 @@ namespace CraneMachine
             if (ServiceLocator.FuelService != null)
                 ServiceLocator.FuelService.Add(fuelPerItem);
 
-            if (funnelSfx != null) funnelSfx.Play();
+            OnFunneled?.Invoke();
 
             Destroy(item.gameObject);
         }

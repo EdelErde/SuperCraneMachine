@@ -22,6 +22,12 @@ namespace CraneMachine
         private static readonly Dictionary<ScreenId, List<ScreenCameraRef>> _refs
             = new Dictionary<ScreenId, List<ScreenCameraRef>>();
 
+        // Tracks which screen is currently live, for anything that needs to react to
+        // screen switches (see SfxManager's screen-scoped sounds). Defaults to the
+        // first ScreenId (Screen1) until the first Activate() call.
+        public static ScreenId Current { get; private set; }
+        public static event System.Action<ScreenId> OnActivated;
+
         public ScreenId Screen => screen;
 
         private void Awake()
@@ -53,6 +59,9 @@ namespace CraneMachine
         // screen's camera(s) to inactivePriority. CinemachineBrain does the blending.
         public static void Activate(ScreenId screen)
         {
+            Current = screen;
+            OnActivated?.Invoke(screen);
+
             foreach (var kvp in _refs)
             {
                 bool isTarget = kvp.Key == screen;

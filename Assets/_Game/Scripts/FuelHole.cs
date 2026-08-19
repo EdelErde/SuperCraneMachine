@@ -35,9 +35,10 @@ namespace CraneMachine
                  "Leave at (0,0) to use the exit transform's own 'right' axis instead.")]
         [SerializeField] private Vector2 ejectDir = new Vector2(0f, -1f);
 
-        [Header("SFX (optional)")]
-        [SerializeField] private SfxSource intakeSfx;
-        [SerializeField] private SfxSource ejectSfx;
+        // SFX lives in the dedicated SFX/ components (see FuelHoleSfx), which listen to
+        // these events rather than the hole owning sound config itself.
+        public event System.Action OnIntake;
+        public event System.Action OnEject;
 
         private class Pending
         {
@@ -112,7 +113,7 @@ namespace CraneMachine
             SetItemVisible(item, false);
 
             _buffer.Add(new Pending { item = item, readyAt = Time.time + processTime });
-            if (intakeSfx != null) intakeSfx.Play();
+            OnIntake?.Invoke();
         }
 
         private void Eject(Item item)
@@ -134,7 +135,7 @@ namespace CraneMachine
                     rb.AddForce(dir * ejectForce, ForceMode2D.Impulse);
             }
 
-            if (ejectSfx != null) ejectSfx.Play();
+            OnEject?.Invoke();
         }
 
         private Vector2 EjectDirection(Transform point)

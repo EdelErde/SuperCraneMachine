@@ -14,5 +14,6 @@ namespace CraneMachine
         public static CursorManager CursorManager;
         public static ParticleBurstPool Particles;
         public static AudioMixerController Audio;
+        public static SfxManager Sfx;
     }
 }

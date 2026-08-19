@@ -30,12 +30,41 @@ namespace CraneMachine
 
         public event System.Action<ScreenId> OnScreenUnlocked;
 
-        private void Awake() => ServiceLocator.ScreenUnlocks = this;
+        // Fires once, right after this service has finished computing the initial
+        // unlocked set in Awake() — lets anything that read ServiceLocator.ScreenUnlocks
+        // too early (Unity doesn't guarantee Awake() order between independent
+        // components) correct itself once this service is actually ready, instead of
+        // being stuck on whatever it saw (or didn't see) during its own Awake().
+        public static event System.Action Ready;
+
+        private void Awake()
+        {
+            ServiceLocator.ScreenUnlocks = this;
+
+            // Any ScreenId with no rule in 'rules' has no unlock condition at all —
+            // treat it as unlocked from the start (this is how you mark a screen as
+            // "always available", e.g. your starting screen: just don't give it a
+            // rule). Only screens that actually have a rule targeting them start
+            // locked, pending that rule's conditions.
+            var ruled = new HashSet<ScreenId>();
+            if (rules != null)
+                foreach (var rule in rules)
+                    if (rule != null) ruled.Add(rule.screen);
+
+            foreach (ScreenId screen in System.Enum.GetValues(typeof(ScreenId)))
+                if (!ruled.Contains(screen)) _unlocked.Add(screen);
+
+            Ready?.Invoke();
+        }
 
         private void OnDestroy()
         {
             if (ServiceLocator.ScreenUnlocks == this)
                 ServiceLocator.ScreenUnlocks = null;
+
+            // Static event — clear subscribers on teardown so a scene reload doesn't
+            // accumulate stale listeners from the previous instance.
+            Ready = null;
         }
 
         public bool IsUnlocked(ScreenId screen) => _unlocked.Contains(screen);

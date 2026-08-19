@@ -62,6 +62,10 @@ namespace CraneMachine
 
         public event System.Action<bool> OnToggled;
 
+        // For SfxManager — fires when an item enters the belt (was previously a
+        // dedicated ConveyorSfx component's OnTriggerEnter2D; centralized now).
+        public event System.Action OnItemEntered;
+
         public bool MachineEnabled
         {
             get => _enabled;
@@ -111,7 +115,10 @@ namespace CraneMachine
 
             var rb = other.attachedRigidbody;
             if (rb != null && !_onBelt.Contains(rb))
+            {
                 _onBelt.Add(rb);
+                OnItemEntered?.Invoke();
+            }
         }
 
         private void OnTriggerExit2D(Collider2D other)

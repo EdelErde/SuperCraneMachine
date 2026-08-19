@@ -37,13 +37,14 @@ namespace CraneMachine
                  "Leave at (0,0) to use the exit transform's own 'right' axis instead.")]
         [SerializeField] private Vector2 ejectDir = new Vector2(0f, -1f);
 
-        [Header("SFX (optional)")]
-        [SerializeField] private SfxSource intakeSfx;
-        [SerializeField] private SfxSource produceSfx;
-
         [Header("Feedback (optional)")]
         [Tooltip("Rumble that plays while the filter is processing an item.")]
         [SerializeField] private MachineRumble rumble;
+
+        // SFX lives in the dedicated SFX/ components (see FuelFilterSfx), which listen
+        // to these events rather than the filter owning sound config itself.
+        public event System.Action OnIntake;
+        public event System.Action OnProduce;
 
         private class Pending
         {
@@ -103,7 +104,7 @@ namespace CraneMachine
             SetItemVisible(item, false);
 
             _buffer.Add(new Pending { item = item, readyAt = Time.time + ProcessTime });
-            if (intakeSfx != null) intakeSfx.Play();
+            OnIntake?.Invoke();
         }
 
         private void Update()
@@ -163,7 +164,7 @@ namespace CraneMachine
                     rb.AddForce(dir * ejectForce, ForceMode2D.Impulse);
             }
 
-            if (produceSfx != null) produceSfx.Play();
+            OnProduce?.Invoke();
         }
 
         private Vector2 EjectDirection(Transform point)
