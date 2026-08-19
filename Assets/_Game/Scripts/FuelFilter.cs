@@ -37,6 +37,17 @@ namespace CraneMachine
                  "Leave at (0,0) to use the exit transform's own 'right' axis instead.")]
         [SerializeField] private Vector2 ejectDir = new Vector2(0f, -1f);
 
+        [Header("Liquid droplets (optional)")]
+        [Tooltip("Emit fuel liquid droplets from the exit each time this filter produces fuel. " +
+                 "Requires a FuelLiquidSystem in the scene (Tools > Fuel Liquid > Create Fuel Liquid Setup).")]
+        [SerializeField] private bool emitLiquidDroplets = true;
+        [Tooltip("How many droplets to spray out per produced fuel item.")]
+        [SerializeField] private int dropletsPerProduce = 6;
+        [Tooltip("Random positional spread (world units) around the exit that droplets spawn within.")]
+        [SerializeField] private float dropletSpread = 0.15f;
+        [Tooltip("Random extra velocity (world units/sec) added to each droplet on top of the eject velocity.")]
+        [SerializeField] private float dropletVelocityJitter = 0.5f;
+
         [Header("Feedback (optional)")]
         [Tooltip("Rumble that plays while the filter is processing an item.")]
         [SerializeField] private MachineRumble rumble;
@@ -154,17 +165,38 @@ namespace CraneMachine
             var fuelItem = go.GetComponent<Item>();
             SetItemVisible(fuelItem, true);
 
+            Vector2 ejectVelocity = Vector2.zero;
             var rb = go.GetComponent<Rigidbody2D>();
             if (rb != null)
             {
                 rb.simulated = true;
                 Vector2 dir = EjectDirection(point);
-                rb.linearVelocity = dir * ejectSpeed;
+                ejectVelocity = dir * ejectSpeed;
+                rb.linearVelocity = ejectVelocity;
                 if (ejectForce > 0f)
                     rb.AddForce(dir * ejectForce, ForceMode2D.Impulse);
             }
 
+            EmitLiquidDroplets(point, ejectVelocity);
+
             OnProduce?.Invoke();
+        }
+
+        // Spray a burst of fuel liquid droplets from the exit so produced fuel reads as
+        // a gooey liquid mass (see FuelLiquidSystem). No-op if the system isn't present.
+        private void EmitLiquidDroplets(Transform point, Vector2 baseVelocity)
+        {
+            if (!emitLiquidDroplets || dropletsPerProduce <= 0) return;
+            if (FuelLiquidSystem.Instance == null) return;
+
+            Vector2 origin = point != null ? (Vector2)point.position : (Vector2)transform.position;
+
+            for (int i = 0; i < dropletsPerProduce; i++)
+            {
+                Vector2 pos = origin + Random.insideUnitCircle * dropletSpread;
+                Vector2 vel = baseVelocity + Random.insideUnitCircle * dropletVelocityJitter;
+                FuelLiquidSystem.Spawn(pos, vel);
+            }
         }
 
         private Vector2 EjectDirection(Transform point)
