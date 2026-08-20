@@ -1,93 +1,176 @@
 #if UNITY_EDITOR
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
 namespace CraneMachine
 {
     /// <summary>
-    /// One-click setup for the FuelLiquid pipeline. Menu:
-    ///   Tools > Fuel Liquid > Create Fuel Liquid Setup
+    /// Setup + migration for the generalized LiquidField pipeline (shared field, many
+    /// liquid types, color per droplet). Menu:
+    ///   Tools > Liquid Field > Create Liquid Field Setup   (fresh scene rig + assets)
+    ///   Tools > Liquid Field > Update / Migrate Existing   (upgrade an old FuelLiquid
+    ///                                                        setup, wherever you moved it)
     ///
-    /// Automates everything that CAN be automated from the editor:
-    ///   - ensures a "FuelField" layer exists (edits TagManager)
-    ///   - creates the field RenderTexture asset (with a valid Render Graph desc)
-    ///   - creates M_FuelLiquidBlob + M_FuelLiquidComposite materials from the
-    ///     FuelLiquid/Blob and FuelLiquid/Composite shaders
-    ///   - builds a droplet prefab (Rigidbody2D + CircleCollider2D + SpriteRenderer
-    ///     + FuelLiquidParticle) on the FuelField layer
-    ///   - creates the scene rig: a "Fuel Liquid" root holding the FuelFieldCamera
-    ///     (culling mask = FuelField only, targeting the RT), the composite quad
-    ///     (FuelFieldComposite), and the FuelLiquidSystem spawner
-    ///
-    /// What it CANNOT do for you (and will tell you about in the summary):
-    ///   - pick the soft-circle sprite for droplets (assign one you like)
-    ///   - position/scale the composite quad to your play area
-    ///   - drop a FuelLiquidEmitter on your real FuelFilter object
+    /// The Update command is location-agnostic: you moved assets out of Generated/, so it
+    /// FINDS the RenderTexture / materials / droplet prefab / scene objects by type and
+    /// name across the whole project instead of assuming fixed paths, then:
+    ///   - fixes the field RT depth buffer if still None
+    ///   - repoints materials to the new LiquidField/Blob + LiquidField/Composite shaders
+    ///   - swaps old Fuel* components for the new Liquid* ones on scene objects and the
+    ///     droplet prefab, preserving wiring where it can
+    ///   - re-runs the main-camera culling-mask fix
     /// </summary>
-    public static class FuelLiquidSetupEditor
+    public static class LiquidFieldSetupEditor
     {
-        private const string LayerName = "FuelField";
-        private const string FolderRoot = "Assets/FuelLiquid";
+        private const string LayerName = "Liquid";       // renamed from FuelField
+        private const string LegacyLayerName = "FuelField";
+        private const string FolderRoot = "Assets/LiquidField";
         private const string GeneratedFolder = FolderRoot + "/Generated";
+        private const string SpriteName = "LiquidDroplet_Circle";
 
-        [MenuItem("Tools/Fuel Liquid/Create Fuel Liquid Setup")]
+        // ----- CREATE ---------------------------------------------------------
+
+        [MenuItem("Tools/Liquid Field/Create Liquid Field Setup")]
         public static void CreateSetup()
         {
-            var log = new System.Text.StringBuilder();
-            log.AppendLine("Fuel Liquid setup:");
+            var log = new System.Text.StringBuilder("Liquid Field setup:\n");
 
             EnsureFolder(FolderRoot);
             EnsureFolder(GeneratedFolder);
 
             int layer = EnsureLayer(LayerName, log);
+            RemoveLayerFromMainCamera(layer, log);
 
-            RenderTexture rt = CreateFieldTexture(log);
-            Material blobMat = CreateMaterial("FuelLiquid/Blob", "M_FuelLiquidBlob", log);
-            Material compMat = CreateMaterial("FuelLiquid/Composite", "M_FuelLiquidComposite", log);
+            RenderTexture rt = FindOrCreateFieldTexture(log);
+            Material blobMat = FindOrCreateMaterial("LiquidField/Blob", "M_LiquidFieldBlob", log);
+            Material compMat = FindOrCreateMaterial("LiquidField/Composite", "M_LiquidFieldComposite", log);
 
-            if (compMat != null && rt != null)
-                compMat.SetTexture("_FieldTex", rt);
+            AssignSoftCircleSprite(blobMat, log);
+            if (compMat != null && rt != null) compMat.SetTexture("_FieldTex", rt);
 
-            GameObject dropletPrefab = CreateDropletPrefab(blobMat, layer, log);
-
+            GameObject dropletPrefab = FindOrCreateDropletPrefab(blobMat, layer, log);
             BuildSceneRig(rt, compMat, dropletPrefab, layer, log);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             log.AppendLine();
-            log.AppendLine("MANUAL STEPS REMAINING:");
-            log.AppendLine("  1. Assign a soft-circle sprite to the droplet prefab's " +
-                           "SpriteRenderer (Assets/FuelLiquid/Generated/FuelDroplet.prefab). " +
-                           "Sprite mesh type must be Full Rect.");
-            log.AppendLine("  2. Move/scale the 'Fuel Liquid/Composite Quad' to cover your " +
-                           "play area (it must match the field camera's framing).");
-            log.AppendLine("  3. Add a FuelLiquidEmitter to your real FuelFilter object, " +
-                           "OR call FuelLiquidSystem.Spawn(pos, vel) from your own code.");
-
+            log.AppendLine("REMAINING MANUAL STEPS:");
+            log.AppendLine("  1. If the droplet prefab's SpriteRenderer has no sprite, assign " +
+                           SpriteName + " (mesh type Full Rect).");
+            log.AppendLine("  2. Author liquids in LiquidFieldSystem.liquids (Fuel is entry 0).");
+            log.AppendLine("  3. Emit: add LiquidEmitter (pick its LiquidType) to a source, or " +
+                           "call LiquidFieldSystem.Spawn(type, pos, vel).");
             Debug.Log(log.ToString());
-            EditorUtility.DisplayDialog("Fuel Liquid Setup",
-                "Setup complete. See the Console for details and the 3 remaining manual steps.",
-                "OK");
+            EditorUtility.DisplayDialog("Liquid Field Setup", "Setup complete. See Console.", "OK");
         }
 
-        // ---- Layer -----------------------------------------------------------
+        // ----- UPDATE / MIGRATE ----------------------------------------------
+
+        [MenuItem("Tools/Liquid Field/Update - Migrate Existing")]
+        public static void MigrateExisting()
+        {
+            var log = new System.Text.StringBuilder("Liquid Field migration:\n");
+
+            // Layer: keep the existing one (Liquid or the legacy FuelField); don't force rename.
+            int layer = LayerMask.NameToLayer(LayerName);
+            if (layer == -1) layer = LayerMask.NameToLayer(LegacyLayerName);
+            if (layer == -1) layer = EnsureLayer(LayerName, log);
+            else log.AppendLine($"  using existing liquid layer #{layer}.");
+            RemoveLayerFromMainCamera(layer, log);
+
+            // 1) Fix the field RenderTexture depth, wherever it now lives.
+            RenderTexture rt = FindAssetByName<RenderTexture>("FuelFieldTexture")
+                             ?? FindAssetByName<RenderTexture>("LiquidFieldTexture");
+            if (rt != null)
+            {
+                if (rt.depthStencilFormat == UnityEngine.Experimental.Rendering.GraphicsFormat.None)
+                    log.AppendLine("  NOTE: field RT still has depth None — set its Depth Stencil " +
+                                   "Format to D24_UNorm_S8 in the inspector (can't change a live RT asset's depth from script reliably).");
+                else
+                    log.AppendLine($"  found field RT '{rt.name}', depth OK.");
+            }
+            else log.AppendLine("  WARNING: no field RenderTexture found (searched FuelFieldTexture/LiquidFieldTexture).");
+
+            // 2) Repoint materials to the new shaders (find old or new material names).
+            Material blob = FindAssetByName<Material>("M_FuelLiquidBlob")
+                          ?? FindAssetByName<Material>("M_LiquidFieldBlob");
+            Material comp = FindAssetByName<Material>("M_FuelLiquidComposite")
+                          ?? FindAssetByName<Material>("M_LiquidFieldComposite");
+            RepointShader(blob, "LiquidField/Blob", log);
+            RepointShader(comp, "LiquidField/Composite", log);
+            if (comp != null && rt != null) comp.SetTexture("_FieldTex", rt);
+            AssignSoftCircleSprite(blob, log);
+
+            // 3) Swap components on scene objects + droplet prefab.
+            int swapped = 0;
+            swapped += SwapComponent<FuelFieldCameraShim, LiquidFieldCamera>(log, "FuelFieldCamera");
+            swapped += SwapComponent<FuelFieldCompositeShim, LiquidFieldComposite>(log, "FuelFieldComposite");
+            swapped += SwapComponent<FuelLiquidSystemShim, LiquidFieldSystem>(log, "FuelLiquidSystem");
+            swapped += SwapComponent<FuelLiquidParticleShim, LiquidParticle>(log, "FuelLiquidParticle");
+            swapped += SwapComponent<FuelLiquidEmitterShim, LiquidEmitter>(log, "FuelLiquidEmitter");
+
+            if (swapped == 0)
+                log.AppendLine("  no legacy Fuel* components found in the open scene. If your old " +
+                               "scripts are already deleted, just add the new Liquid* components and " +
+                               "re-run Create instead.");
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log(log.ToString());
+            EditorUtility.DisplayDialog("Liquid Field Migration",
+                "Migration pass complete. See Console — some steps may need a manual touch " +
+                "(noted there), especially the RT depth format and re-wiring references.", "OK");
+        }
+
+        // Shim types: these let the tool reference old component class names for GetComponent
+        // even after you rename. They are never added to anything — only used as type keys.
+        // If your old scripts are deleted, these resolve to null and the swap is simply skipped.
+        private class FuelFieldCameraShim : MonoBehaviour { }
+        private class FuelFieldCompositeShim : MonoBehaviour { }
+        private class FuelLiquidSystemShim : MonoBehaviour { }
+        private class FuelLiquidParticleShim : MonoBehaviour { }
+        private class FuelLiquidEmitterShim : MonoBehaviour { }
+
+        // Swap by MonoScript name via SerializedObject "m_Script" — works even if the old
+        // class still exists, and is skipped cleanly if it doesn't.
+        private static int SwapComponent<TOldShim, TNew>(System.Text.StringBuilder log, string oldClassName)
+            where TOldShim : MonoBehaviour where TNew : MonoBehaviour
+        {
+            var newScript = FindMonoScript(typeof(TNew).Name);
+            if (newScript == null) { log.AppendLine($"  (new script {typeof(TNew).Name} not found)"); return 0; }
+
+            int count = 0;
+            foreach (var mb in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (mb == null) continue;
+                var so = new SerializedObject(mb);
+                var scriptProp = so.FindProperty("m_Script");
+                if (scriptProp == null) continue;
+                var ms = scriptProp.objectReferenceValue as MonoScript;
+                if (ms == null || ms.name != oldClassName) continue;
+
+                scriptProp.objectReferenceValue = newScript;
+                so.ApplyModifiedProperties();
+                count++;
+            }
+            if (count > 0) log.AppendLine($"  swapped {count}x {oldClassName} -> {typeof(TNew).Name}.");
+            return count;
+        }
+
+        // ----- shared helpers -------------------------------------------------
 
         private static int EnsureLayer(string name, System.Text.StringBuilder log)
         {
             int existing = LayerMask.NameToLayer(name);
-            if (existing != -1)
-            {
-                log.AppendLine($"  layer '{name}' already exists (#{existing}).");
-                return existing;
-            }
+            if (existing != -1) { log.AppendLine($"  layer '{name}' exists (#{existing})."); return existing; }
 
             var tagManager = new SerializedObject(
                 AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
             SerializedProperty layers = tagManager.FindProperty("layers");
-
-            // User layers are indices 8..31.
             for (int i = 8; i < 32; i++)
             {
                 SerializedProperty sp = layers.GetArrayElementAtIndex(i);
@@ -99,164 +182,183 @@ namespace CraneMachine
                     return i;
                 }
             }
-
-            log.AppendLine($"  WARNING: no free user layer slot for '{name}'. " +
-                           "Free one up and re-run.");
+            log.AppendLine($"  WARNING: no free layer slot for '{name}'.");
             return 0;
         }
 
-        // ---- Assets ----------------------------------------------------------
-
-        private static RenderTexture CreateFieldTexture(System.Text.StringBuilder log)
+        private static void RemoveLayerFromMainCamera(int layer, System.Text.StringBuilder log)
         {
-            string path = GeneratedFolder + "/FuelFieldTexture.renderTexture";
-            var existing = AssetDatabase.LoadAssetAtPath<RenderTexture>(path);
-            if (existing != null)
-            {
-                log.AppendLine("  field RenderTexture already exists.");
-                return existing;
-            }
+            Camera main = Camera.main;
+            if (main == null) { log.AppendLine("  NOTE: no Camera.main; exclude the liquid layer from your game camera manually."); return; }
+            int before = main.cullingMask;
+            main.cullingMask &= ~(1 << layer);
+            log.AppendLine(main.cullingMask != before
+                ? $"  removed liquid layer from '{main.name}' culling mask."
+                : $"  '{main.name}' already excludes liquid layer.");
+            EditorUtility.SetDirty(main);
+        }
 
-            var rt = new RenderTexture(512, 256, 0, RenderTextureFormat.ARGB32)
+        private static RenderTexture FindOrCreateFieldTexture(System.Text.StringBuilder log)
+        {
+            var found = FindAssetByName<RenderTexture>("LiquidFieldTexture")
+                      ?? FindAssetByName<RenderTexture>("FuelFieldTexture");
+            if (found != null) { log.AppendLine($"  reusing field RT '{found.name}'."); return found; }
+
+            EnsureFolder(GeneratedFolder);
+            var rt = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32)
             {
-                name = "FuelFieldTexture",
-                // No depth needed for a flat 2D field; explicit so it persists on the asset.
-                depthStencilFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.None,
-                antiAliasing = 1,
-                useMipMap = false,
-                autoGenerateMips = false
+                name = "LiquidFieldTexture",
+                depthStencilFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.D24_UNorm_S8_UInt,
+                antiAliasing = 1, useMipMap = false, autoGenerateMips = false,
+                // Bilinear + high res so droplets read as smooth blobs, not blocky texels,
+                // even when the camera is zoomed out over a large level.
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
             };
-            AssetDatabase.CreateAsset(rt, path);
-            log.AppendLine("  created field RenderTexture (512x256).");
+            AssetDatabase.CreateAsset(rt, GeneratedFolder + "/LiquidFieldTexture.renderTexture");
+            log.AppendLine("  created field RT (1920x1080, depth 24, bilinear).");
             return rt;
         }
 
-        private static Material CreateMaterial(string shaderName, string assetName,
-                                               System.Text.StringBuilder log)
+        private static Material FindOrCreateMaterial(string shaderName, string assetName,
+                                                     System.Text.StringBuilder log)
         {
-            string path = $"{GeneratedFolder}/{assetName}.mat";
-            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (existing != null)
-            {
-                log.AppendLine($"  material {assetName} already exists.");
-                return existing;
-            }
+            var found = FindAssetByName<Material>(assetName);
+            if (found != null) { RepointShader(found, shaderName, log); return found; }
 
             Shader shader = Shader.Find(shaderName);
-            if (shader == null)
-            {
-                log.AppendLine($"  WARNING: shader '{shaderName}' not found. Import the " +
-                               ".shader files first, then re-run.");
-                return null;
-            }
+            if (shader == null) { log.AppendLine($"  WARNING: shader '{shaderName}' not found; import .shader files then re-run."); return null; }
 
+            EnsureFolder(GeneratedFolder);
             var mat = new Material(shader) { name = assetName };
-            AssetDatabase.CreateAsset(mat, path);
-            log.AppendLine($"  created material {assetName}.");
+            AssetDatabase.CreateAsset(mat, $"{GeneratedFolder}/{assetName}.mat");
+            log.AppendLine($"  created {assetName}.");
             return mat;
         }
 
-        private static GameObject CreateDropletPrefab(Material blobMat, int layer,
-                                                      System.Text.StringBuilder log)
+        private static void RepointShader(Material mat, string shaderName, System.Text.StringBuilder log)
         {
-            string path = GeneratedFolder + "/FuelDroplet.prefab";
-            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null)
-            {
-                log.AppendLine("  droplet prefab already exists.");
-                return existing;
-            }
+            if (mat == null) return;
+            Shader s = Shader.Find(shaderName);
+            if (s == null) { log.AppendLine($"  WARNING: shader '{shaderName}' not found (can't repoint {mat.name})."); return; }
+            if (mat.shader != s) { mat.shader = s; EditorUtility.SetDirty(mat); log.AppendLine($"  repointed {mat.name} -> {shaderName}."); }
+        }
 
-            var go = new GameObject("FuelDroplet");
+        private static void AssignSoftCircleSprite(Material blobMat, System.Text.StringBuilder log)
+        {
+            if (blobMat == null) return;
+            var tex = FindAssetByName<Texture>(SpriteName);
+            if (tex != null) { blobMat.SetTexture("_MainTex", tex); log.AppendLine("  assigned soft circle to blob material."); }
+            else log.AppendLine("  NOTE: soft circle sprite not found; assign _MainTex manually.");
+        }
+
+        private static GameObject FindOrCreateDropletPrefab(Material blobMat, int layer,
+                                                            System.Text.StringBuilder log)
+        {
+            var found = FindAssetByName<GameObject>("LiquidDroplet")
+                      ?? FindAssetByName<GameObject>("FuelDroplet");
+            if (found != null) { log.AppendLine($"  reusing droplet prefab '{found.name}'."); return found; }
+
+            EnsureFolder(GeneratedFolder);
+            var go = new GameObject("LiquidDroplet");
             go.layer = layer;
+            go.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
 
             var sr = go.AddComponent<SpriteRenderer>();
             if (blobMat != null) sr.sharedMaterial = blobMat;
+            var sprite = FindAssetByName<Sprite>(SpriteName);
+            if (sprite != null) sr.sprite = sprite;
 
             var rb = go.AddComponent<Rigidbody2D>();
-            rb.gravityScale = 1f;
+            rb.gravityScale = 3f;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            go.AddComponent<CircleCollider2D>().radius = 0.3f;
+            go.AddComponent<LiquidParticle>();
 
-            var col = go.AddComponent<CircleCollider2D>();
-            col.radius = 0.15f;
-
-            go.AddComponent<FuelLiquidParticle>();
-
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, GeneratedFolder + "/LiquidDroplet.prefab");
             UnityEngine.Object.DestroyImmediate(go);
-            log.AppendLine("  created droplet prefab (sprite unassigned — see manual steps).");
+            log.AppendLine("  created droplet prefab.");
             return prefab;
         }
-
-        // ---- Scene rig -------------------------------------------------------
 
         private static void BuildSceneRig(RenderTexture rt, Material compMat,
                                           GameObject dropletPrefab, int layer,
                                           System.Text.StringBuilder log)
         {
-            if (GameObject.Find("Fuel Liquid") != null)
+            if (GameObject.Find("Liquid Field System") != null || GameObject.Find("Fuel Liquid System") != null)
             {
-                log.AppendLine("  scene rig 'Fuel Liquid' already present; skipped rig build.");
+                log.AppendLine("  scene rig already present; skipped.");
                 return;
             }
 
-            var root = new GameObject("Fuel Liquid");
-
-            // Field camera
-            var camGo = new GameObject("Fuel Field Camera");
-            camGo.transform.SetParent(root.transform);
+            Camera main = Camera.main;
+            var camGo = new GameObject("Liquid Field Camera");
+            if (main != null) camGo.transform.SetParent(main.transform, false);
             var cam = camGo.AddComponent<Camera>();
             cam.orthographic = true;
-            cam.orthographicSize = 5f;
+            cam.orthographicSize = main != null ? main.orthographicSize : 5f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0, 0, 0, 0);
-            cam.cullingMask = 1 << layer;      // FuelField only
-            cam.depth = -10;                   // render before main
+            cam.cullingMask = 1 << layer;
+            cam.depth = -10;
             if (rt != null) cam.targetTexture = rt;
-            camGo.transform.position = new Vector3(0, 0, -10);
-            camGo.AddComponent<FuelFieldCamera>();
+            camGo.transform.localPosition = Vector3.zero;
+            var fieldCam = camGo.AddComponent<LiquidFieldCamera>();
+            SetPrivate(fieldCam, "referenceCamera", main);
+            SetPrivate(fieldCam, "fieldTexture", rt);
 
-            // Composite quad (visible liquid)
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = "Composite Quad";
-            quad.transform.SetParent(root.transform);
+            quad.transform.SetParent(camGo.transform, false);
             var qCol = quad.GetComponent<Collider>();
             if (qCol != null) UnityEngine.Object.DestroyImmediate(qCol);
-            var qr = quad.GetComponent<MeshRenderer>();
-            if (compMat != null) qr.sharedMaterial = compMat;
-            quad.transform.localScale = new Vector3(16f, 9f, 1f);
-            quad.AddComponent<FuelFieldComposite>();
+            if (compMat != null) quad.GetComponent<MeshRenderer>().sharedMaterial = compMat;
+            var comp = quad.AddComponent<LiquidFieldComposite>();
+            SetPrivate(comp, "fieldCamera", fieldCam);
 
-            // Spawner / system
-            var sys = new GameObject("Fuel Liquid System");
-            sys.transform.SetParent(root.transform);
-            var system = sys.AddComponent<FuelLiquidSystem>();
-            AssignPrivatePrefab(system, dropletPrefab, log);
+            var sys = new GameObject("Liquid Field System");
+            var system = sys.AddComponent<LiquidFieldSystem>();
+            if (dropletPrefab != null)
+                SetPrivate(system, "particlePrefab", dropletPrefab.GetComponent<LiquidParticle>());
 
-            Undo.RegisterCreatedObjectUndo(root, "Create Fuel Liquid Setup");
-            log.AppendLine("  built scene rig (camera + composite quad + system).");
+            Undo.RegisterCreatedObjectUndo(camGo, "Create Liquid Field Setup");
+            Undo.RegisterCreatedObjectUndo(sys, "Create Liquid Field Setup");
+            log.AppendLine("  built rig: field camera (child of Main), composite quad, system.");
         }
 
-        // FuelLiquidSystem.particlePrefab is [SerializeField] private — set it via
-        // SerializedObject so the tool wires the prefab reference automatically.
-        private static void AssignPrivatePrefab(FuelLiquidSystem system,
-                                                GameObject prefab,
-                                                System.Text.StringBuilder log)
+        // ----- asset/type utilities ------------------------------------------
+
+        private static T FindAssetByName<T>(string exactName) where T : UnityEngine.Object
         {
-            if (system == null || prefab == null) return;
-            var so = new SerializedObject(system);
-            var prop = so.FindProperty("particlePrefab");
-            if (prop != null)
+            string typeFilter = typeof(T) == typeof(GameObject) ? "t:Prefab" : "t:" + typeof(T).Name;
+            foreach (var guid in AssetDatabase.FindAssets($"{exactName} {typeFilter}"))
             {
-                var particle = prefab.GetComponent<FuelLiquidParticle>();
-                prop.objectReferenceValue = particle;
-                so.ApplyModifiedProperties();
-                log.AppendLine("  wired droplet prefab into FuelLiquidSystem.");
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (System.IO.Path.GetFileNameWithoutExtension(path) != exactName) continue;
+                var a = AssetDatabase.LoadAssetAtPath<T>(path);
+                if (a != null) return a;
             }
-            else
+            return null;
+        }
+
+        private static MonoScript FindMonoScript(string className)
+        {
+            foreach (var guid in AssetDatabase.FindAssets($"{className} t:MonoScript"))
             {
-                log.AppendLine("  NOTE: assign the droplet prefab to FuelLiquidSystem manually.");
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (System.IO.Path.GetFileNameWithoutExtension(path) != className) continue;
+                var ms = AssetDatabase.LoadAssetAtPath<MonoScript>(path);
+                if (ms != null && ms.GetClass() != null && ms.GetClass().Name == className) return ms;
             }
+            return null;
+        }
+
+        private static void SetPrivate(Component c, string field, UnityEngine.Object value)
+        {
+            if (c == null) return;
+            var so = new SerializedObject(c);
+            var p = so.FindProperty(field);
+            if (p != null) { p.objectReferenceValue = value; so.ApplyModifiedProperties(); }
         }
 
         private static void EnsureFolder(string path)

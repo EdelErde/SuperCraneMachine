@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 4487355591842574375}
   - component: {fileID: 3493242990945657584}
   - component: {fileID: 678688012671157412}
-  - component: {fileID: 3990899851545220539}
   - component: {fileID: 1110784254755641579}
-  m_Layer: 8
+  - component: {fileID: 6790514959563845993}
+  m_Layer: 9
   m_Name: FuelDroplet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -31,8 +31,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -62,7 +62,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 576484f12f00043499d8d5500d696e6c, type: 2}
+  - {fileID: 2100000, guid: ef9402b8df1b7b54d8cefc8f144cd080, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -85,7 +85,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: a33f7740b52b04d4b9b9967bffa9765c, type: 3}
+  m_Sprite: {fileID: 21300000, guid: be10430a54fe61549984c46e3676566d, type: 3}
   m_Color: {r: 0.21383637, g: 0.21383637, b: 0.21383637, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -158,21 +158,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.5
---- !u!114 &3990899851545220539
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3165493030063619627}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fb0be25990c14a54fafc8fb896c04fd7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.FuelLiquidParticle
-  visualScale: 2
-  lifetime: 0
+  m_Radius: 0.2
 --- !u!114 &1110784254755641579
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -198,3 +184,17 @@ MonoBehaviour:
     - rid: 6094897959685324883
       type: {class: Fuel, ns: CraneMachine, asm: Assembly-CSharp}
       data: 
+--- !u!114 &6790514959563845993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3165493030063619627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e34286f1ca444f89fa44a3ea7b2f164, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.LiquidParticle
+  visualScale: 1
+  lifetime: 0

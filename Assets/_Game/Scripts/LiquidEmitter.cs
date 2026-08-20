@@ -1,18 +1,18 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace CraneMachine
 {
     /// <summary>
-    /// Optional glue: emits fuel liquid droplets from a spout whenever the FuelFilter
-    /// on the same object (or an assigned one) fires its OnProduce event. Additive —
-    /// drop this onto the FuelFilter GameObject, no changes to FuelFilter.cs needed
-    /// (it already exposes `public event System.Action OnProduce`).
-    ///
-    /// If you'd rather drive droplets from somewhere else (a manual drip, a tank
-    /// overflow), skip this and call FuelLiquidSystem.Spawn(...) directly.
+    /// Optional glue: emits droplets of a chosen LiquidType from a spout whenever the
+    /// FuelFilter on the same object fires OnProduce. Additive — no changes to
+    /// FuelFilter.cs needed. For non-fuel sources (a water outlet, an acid drip), reuse
+    /// this component with a different `liquid`, or call LiquidFieldSystem.Spawn directly.
     /// </summary>
-    public class FuelLiquidEmitter : MonoBehaviour
+    public class LiquidEmitter : MonoBehaviour
     {
+        [Tooltip("Which liquid this emitter sprays.")]
+        [SerializeField] private LiquidType liquid = LiquidType.Fuel;
+
         [SerializeField] private FuelFilter fuelFilter;
 
         [Tooltip("Where droplets appear. Defaults to this transform if unset.")]
@@ -43,12 +43,11 @@ namespace CraneMachine
         private void HandleProduce()
         {
             Vector2 origin = spout != null ? (Vector2)spout.position : (Vector2)transform.position;
-
             for (int i = 0; i < dropletsPerProduce; i++)
             {
                 Vector2 pos = origin + Random.insideUnitCircle * spread;
                 Vector2 vel = launchVelocity + Random.insideUnitCircle * velocityJitter;
-                FuelLiquidSystem.Spawn(pos, vel);
+                LiquidFieldSystem.Spawn(liquid, pos, vel);
             }
         }
     }

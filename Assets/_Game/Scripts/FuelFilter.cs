@@ -10,7 +10,9 @@ namespace CraneMachine
     // to actually add it to the shared fuel pool.
     //
     // Mirrors SortingMachine's buffer/timer/eject structure.
-    [RequireComponent(typeof(Collider2D))]
+    //
+    // The `entry` trigger can live on this object OR on a separate collider elsewhere
+    // (see FuelFilterEntryRelay), so a collider on this GameObject is no longer required.
     public class FuelFilter : MonoBehaviour, IWorldInteractable
     {
         public Transform Transform => transform;
@@ -23,7 +25,9 @@ namespace CraneMachine
         [SerializeField] private ItemDatabase database;
 
         [Header("Points (place in scene)")]
-        [Tooltip("Trigger the player drops input items into. If null, uses this object's collider.")]
+        [Tooltip("Trigger the player drops input items into. Can be a collider on THIS object " +
+                 "or a separate collider anywhere in the scene. If null, uses this object's " +
+                 "collider (if any).")]
         [SerializeField] private Collider2D entry;
         [Tooltip("Where produced Fuel items are spawned/ejected. Defaults to this transform.")]
         [SerializeField] private Transform exit;
@@ -39,7 +43,7 @@ namespace CraneMachine
 
         [Header("Liquid droplets (optional)")]
         [Tooltip("Emit fuel liquid droplets from the exit each time this filter produces fuel. " +
-                 "Requires a FuelLiquidSystem in the scene (Tools > Fuel Liquid > Create Fuel Liquid Setup).")]
+                 "Requires a LiquidFieldSystem in the scene (Tools > Liquid Field > Create Liquid Field Setup).")]
         [SerializeField] private bool emitLiquidDroplets = true;
         [Tooltip("How many droplets to spray out per produced fuel item.")]
         [SerializeField] private int dropletsPerProduce = 6;
@@ -86,8 +90,39 @@ namespace CraneMachine
 
         private void Awake()
         {
-            if (entry == null) entry = GetComponent<Collider2D>();
+            var ownCollider = GetComponent<Collider2D>();
+
+            // Default the entry to this object's own collider if one exists and none was assigned.
+            if (entry == null) entry = ownCollider;
             if (exit == null) exit = transform;
+
+            WireEntry();
+        }
+
+        // Make the `entry` collider actually deliver intakes. Unity only sends
+        // OnTriggerEnter2D to a component on the SAME GameObject as the colliding
+        // collider, so if `entry` is a separate object we attach a relay there that
+        // forwards back to us. If `entry` is our own collider, this object's own
+        // OnTriggerEnter2D handles it and no relay is needed.
+        private void WireEntry()
+        {
+            if (entry == null)
+            {
+                Debug.LogWarning("[FuelFilter] No entry collider set and none on this object — " +
+                                 "the filter has no way to receive items.", this);
+                return;
+            }
+
+            // Ensure the entry collider is a trigger (that's how items are detected).
+            entry.isTrigger = true;
+
+            // If the entry lives on another GameObject, put a relay there to forward events.
+            if (entry.gameObject != gameObject)
+            {
+                var relay = entry.GetComponent<FuelFilterEntryRelay>();
+                if (relay == null) relay = entry.gameObject.AddComponent<FuelFilterEntryRelay>();
+                relay.Bind(this);
+            }
         }
 
         private ItemDatabase ResolveDatabase()
@@ -96,11 +131,20 @@ namespace CraneMachine
             return ServiceLocator.ItemSpawner != null ? ServiceLocator.ItemSpawner.Database : null;
         }
 
+        // Fires only when the entry collider is on THIS GameObject. When entry is a
+        // separate collider, FuelFilterEntryRelay calls TryIntake directly instead.
         private void OnTriggerEnter2D(Collider2D other)
         {
-            if (entry != null && other.IsTouching(entry) == false && entry != GetComponent<Collider2D>())
-                return;
+            // Only handle it here if our own collider is the entry; otherwise the relay does.
+            if (entry != null && entry.gameObject != gameObject) return;
+            TryIntake(other);
+        }
 
+        // Attempt to take in a colliding item. Public so FuelFilterEntryRelay can forward
+        // trigger events from a separate entry collider. Runs the accept/capacity checks
+        // and buffers the item for processing.
+        public void TryIntake(Collider2D other)
+        {
             var item = other.GetComponentInParent<Item>();
             if (item == null || _known.Contains(item)) return;
             if (item.type == null || accepts == null || item.type.GetType() != accepts.GetType()) return;
@@ -183,11 +227,11 @@ namespace CraneMachine
         }
 
         // Spray a burst of fuel liquid droplets from the exit so produced fuel reads as
-        // a gooey liquid mass (see FuelLiquidSystem). No-op if the system isn't present.
+        // a gooey liquid mass (see LiquidFieldSystem). No-op if the system isn't present.
         private void EmitLiquidDroplets(Transform point, Vector2 baseVelocity)
         {
             if (!emitLiquidDroplets || dropletsPerProduce <= 0) return;
-            if (FuelLiquidSystem.Instance == null) return;
+            if (LiquidFieldSystem.Instance == null) return;
 
             Vector2 origin = point != null ? (Vector2)point.position : (Vector2)transform.position;
 
@@ -195,7 +239,7 @@ namespace CraneMachine
             {
                 Vector2 pos = origin + Random.insideUnitCircle * dropletSpread;
                 Vector2 vel = baseVelocity + Random.insideUnitCircle * dropletVelocityJitter;
-                FuelLiquidSystem.Spawn(pos, vel);
+                LiquidFieldSystem.Spawn(LiquidType.Fuel, pos, vel);
             }
         }
 

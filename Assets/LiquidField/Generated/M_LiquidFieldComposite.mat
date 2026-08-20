@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M_FuelLiquidComposite
-  m_Shader: {fileID: 4800000, guid: b368153cb4da41b45b2f06df7023100f, type: 3}
+  m_Name: M_LiquidFieldComposite
+  m_Shader: {fileID: 4800000, guid: 36dc2ee1824687e41852053d4a8e7e48, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -24,15 +24,14 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _FieldTex:
-        m_Texture: {fileID: 8400000, guid: 05fc193ab083c3d49ae9c98108e96c8d, type: 2}
+        m_Texture: {fileID: 8400000, guid: d5b4610c4767d2a43a1ea27cca881f17, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _EdgeSoftness: 0.05
-    - _Sheen: 0.35
+    - _EdgeSoftness: 0.02
     - _Threshold: 0.5
     m_Colors:
-    - _LiquidColor: {r: 0.95, g: 0.75, b: 0.14999998, a: 1}
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
