@@ -19,6 +19,12 @@ namespace CraneMachine
         [Tooltip("Item type consumed to build a drone. Default: Tin Can.")]
         [SerializeReference] private ItemType accepts = new TinCan();
 
+        [Tooltip("Which screen this fab's drones work on. Drones search every loose item on " +
+                 "this screen's area (see ScreenArea) — not a radius. Set this to the screen " +
+                 "the fab lives on. Drones can be reassigned to another screen at runtime " +
+                 "via Drone.AssignScreen.")]
+        [SerializeField] private ScreenId screen = ScreenId.Screen1;
+
         [Tooltip("Drone prefab spawned out the exit. Must have a Drone component.")]
         [SerializeField] private Drone dronePrefab;
 
@@ -47,6 +53,9 @@ namespace CraneMachine
         public event System.Action OnProduce;   // a drone popped out
 
         public DroneRouteConfig Config => config;
+
+        // Which screen this fab's drones are assigned to work on.
+        public ScreenId Screen => screen;
 
         // Upgradeable: seconds to build one drone (lower = faster). Floored so upgrades
         // can't drive it to zero. Matches FuelFilterProcessTime's "lower is better" style.
@@ -156,7 +165,7 @@ namespace CraneMachine
             var point = exit != null ? exit : transform;
             var drone = Instantiate(dronePrefab, point.position, Quaternion.identity);
             Vector2 idle = idlePoint != null ? (Vector2)idlePoint.position : (Vector2)point.position;
-            drone.Init(this, Charges, idle);
+            drone.Init(this, Charges, idle, screen);
 
             _live.Add(drone);
             OnProduce?.Invoke();

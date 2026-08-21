@@ -66,7 +66,7 @@ namespace CraneMachine
             // Live multiplier on FuelFunnel yield (base 2 × this). Starts weak (0.6 → ~1.2
             // fuel per item vs the old flat 5) so early fuel is scarce; the Richer Eggs /
             // Enriched Eggs upgrades raise it over the run.
-            _game.RegisterStat(GameStat.FuelPerEgg, 0.6f);
+            _game.RegisterStat(GameStat.FuelPerEgg, 1f);   // 1 egg -> 1 fuel droplet at start (× fuelPerItem base 1)
             _game.RegisterStat(GameStat.FuelConvertRate, 1f / 30f); // unused by current pipeline; left at original
 
             // Leaf blower

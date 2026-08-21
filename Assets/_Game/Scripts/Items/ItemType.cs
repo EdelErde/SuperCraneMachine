@@ -11,6 +11,12 @@ namespace CraneMachine
 
         public virtual bool StartsUnlocked => true;
 
+        // Whether drones can carry this type from the start (before any drone-carry upgrade).
+        // Only Fuel is haulable out of the gate; every other type is unlocked for drone
+        // hauling by an UnlockDroneCarryUpgrade. Defaults to false so new types stay gated
+        // unless they opt in.
+        public virtual bool StartsDroneCarryable => false;
+
         public virtual string DisplayName => GetType().Name;
 
         public Type Key => GetType();
@@ -83,5 +89,8 @@ namespace CraneMachine
         public override int BaseSellValue => 0;
         public override float BaseMass => 0.2f;
         public override float SpawnWeight => 0f;
+
+        // The first (and default) thing drones can haul. Everything else needs an upgrade.
+        public override bool StartsDroneCarryable => true;
     }
 }

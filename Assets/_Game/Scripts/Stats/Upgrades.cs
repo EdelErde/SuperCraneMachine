@@ -309,8 +309,8 @@ namespace CraneMachine
     public class ConveyorSpeedUpgrade : Upgrade
     {
         protected override string Name => "Faster Belt";
-        protected override int BaseCost => 300;
-        protected override float CostMultiplier => 1.6f;
+        protected override int BaseCost => 480;          // rebalanced: conveyor-tier x1.6
+        protected override float CostMultiplier => 1.7f; // steeper so repeat levels keep pace with automation income
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
             Game(GameStat.ConveyorSpeed).AddModifier(new StatModifier(0.75f, StatModifierEffect.Add));
@@ -319,8 +319,8 @@ namespace CraneMachine
     public class ConveyorGripUpgrade : Upgrade
     {
         protected override string Name => "Belt Grip";
-        protected override int BaseCost => 250;
-        protected override float CostMultiplier => 1.55f;
+        protected override int BaseCost => 400;          // rebalanced: conveyor-tier x1.6
+        protected override float CostMultiplier => 1.65f;
         protected override int MaxPurchases => 4;
         protected override void ApplyEffect() =>
             Game(GameStat.ConveyorGrip).AddModifier(new StatModifier(6f, StatModifierEffect.Add));
@@ -340,15 +340,8 @@ namespace CraneMachine
     public class UnlockConveyorUpgrade : ActivateObjectUpgrade
     {
         protected override string Name => "Conveyor Belt";
-        protected override int BaseCost => 2000;
+        protected override int BaseCost => 3200;         // rebalanced: automation gate x1.6
         protected override UnlockTarget Target => UnlockTarget.Conveyor;
-    }
-
-    public class UnlockAutoSeller : ActivateObjectUpgrade
-    {
-        protected override string Name => "AutoSeller";
-        protected override int BaseCost => 2650;
-        protected override UnlockTarget Target => UnlockTarget.AutoSeller;
     }
 
     public class UnlockResourceHoleUpgrade : ActivateObjectUpgrade
@@ -446,6 +439,20 @@ namespace CraneMachine
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
             Game(GameStat.SortCapacity).AddModifier(new StatModifier(2f, StatModifierEffect.Add));
+    }
+
+    // Unlocks the THIRD exit on the specific sorter(s) registered under Target. This is a
+    // partial machine feature, not a whole object, so it flips SortingMachine's exit-C flag
+    // via its registry rather than toggling a GameObject through SceneRef. Point the
+    // screen-2 sorter's 'Exit C Unlock Target' at UnlockTarget.SortingMachineExitC (the
+    // default) and this unlocks it without touching any other sorter.
+    public class UnlockSortingExitCUpgrade : Upgrade
+    {
+        protected override string Name => "Third Sorter Exit";
+        protected override int BaseCost => 3600;         // rebalanced: drone-fab-tier x2.4
+        protected override int MaxPurchases => 1;
+        protected virtual UnlockTarget Target => UnlockTarget.SortingMachineExitC;
+        protected override void ApplyEffect() => SortingMachine.UnlockExitC(Target);
     }
 
     #endregion

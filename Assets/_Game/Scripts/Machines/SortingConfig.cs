@@ -67,14 +67,18 @@ namespace CraneMachine
             OnChanged?.Invoke();
         }
 
-        // Decide the exit for an item type, respecting fuel.
+        // Decide the exit for an item type, respecting fuel and whether exit C is unlocked.
         // hasFuel == false -> always A (drop-through), per the design.
-        public SortExit Decide(Type itemType, bool hasFuel)
+        // exitCUnlocked == false -> a rule pointing at C falls back to A, so items can never
+        // be routed into a locked third exit (even if a rule was authored for it earlier).
+        public SortExit Decide(Type itemType, bool hasFuel, bool exitCUnlocked)
         {
             if (!hasFuel) return SortExit.A;
-            return ExitFor(itemType);
+            var exit = ExitFor(itemType);
+            if (exit == SortExit.C && !exitCUnlocked) return SortExit.A;
+            return exit;
         }
     }
 
-    public enum SortExit { A, B }
+    public enum SortExit { A, B, C }
 }

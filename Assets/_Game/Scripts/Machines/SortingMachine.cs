@@ -18,6 +18,9 @@ namespace CraneMachine
         [SerializeField] private Transform exitA;
         [Tooltip("Where items routed to B are released.")]
         [SerializeField] private Transform exitB;
+        [Tooltip("Where items routed to C are released (the third exit — hidden/unused until " +
+                 "unlocked via the Exit C upgrade). Leave unset on sorters that only have two.")]
+        [SerializeField] private Transform exitC;
 
         [Header("Feel")]
         [Tooltip("Seconds a buffered item waits before being released.")]
@@ -35,16 +38,35 @@ namespace CraneMachine
         [Tooltip("Direction items are launched from exit B, in the machine's LOCAL space. " +
                  "Leave at (0,0) to use exit B's own 'right' axis instead.")]
         [SerializeField] private Vector2 ejectDirB = new Vector2(0f, -1f);
+        [Tooltip("Direction items are launched from exit C, in the machine's LOCAL space. " +
+                 "Leave at (0,0) to use exit C's own 'right' axis instead.")]
+        [SerializeField] private Vector2 ejectDirC = new Vector2(0f, -1f);
 
         [Header("Fuel")]
-        [Tooltip("Base fuel drained per second while the machine holds any items.")]
-        [SerializeField] private float fuelPerSecond = 0.5f;
+        // Base fuel drained per second while the machine holds any items. Code-defined
+        // constant, NOT a [SerializeField]: a stale scene value used to silently override the
+        // script and break fuel balance. Rebalance here; FuelEfficiency scales it live.
+        private const float fuelPerSecond = 0.5f;
         [Tooltip("Name shown for this machine in the production/fuel view.")]
         [SerializeField] private string fuelLabel = "Sorting Machine";
 
         [Header("Power")]
         [Tooltip("Whether the machine starts switched on.")]
         [SerializeField] private bool startEnabled = true;
+
+        [Header("Third exit (optional)")]
+        [Tooltip("Does this sorter physically have a third exit at all? Leave OFF for the " +
+                 "basic two-exit sorter; turn ON for the three-exit one. When off, exit C is " +
+                 "ignored entirely regardless of the unlock below.")]
+        [SerializeField] private bool hasThirdExit = false;
+        [Tooltip("If true, the third exit starts LOCKED and must be unlocked by an " +
+                 "UnlockSortingExitCUpgrade whose target matches 'Exit C Unlock Target' below. " +
+                 "If false, a present third exit is usable immediately.")]
+        [SerializeField] private bool exitCStartsLocked = true;
+        [Tooltip("Which UnlockTarget's upgrade unlocks THIS machine's third exit. Lets one " +
+                 "specific sorter's exit C be unlocked without affecting any other sorter. " +
+                 "Point the screen-2 sorter here and gate it behind its own upgrade.")]
+        [SerializeField] private UnlockTarget exitCUnlockTarget = UnlockTarget.SortingMachineExitC;
 
         [Header("Feedback (optional)")]
         [Tooltip("Rumble that plays while the machine is processing items.")]
@@ -56,6 +78,31 @@ namespace CraneMachine
         public event System.Action OnSorted;
 
         public SortingConfig Config => config;
+
+        // Whether this machine's third exit is currently usable: it must physically have one
+        // AND (either it doesn't start locked, or its unlock target has been activated).
+        public bool ExitCUnlocked =>
+            hasThirdExit && (!exitCStartsLocked || _exitCUnlocked);
+
+        // Whether this machine has a third exit at all (drives the dialog's 3rd column).
+        public bool HasThirdExit => hasThirdExit;
+
+        private bool _exitCUnlocked;
+
+        // Registry so an upgrade can unlock exit C on the specific machine(s) that opted into
+        // a given UnlockTarget — mirrors SceneRef's target->objects pattern, but flips a flag
+        // instead of toggling GameObject.active (exit C is a partial feature, not an object).
+        private static readonly Dictionary<UnlockTarget, List<SortingMachine>> _exitCRefs
+            = new Dictionary<UnlockTarget, List<SortingMachine>>();
+
+        // Called by UnlockSortingExitCUpgrade. Unlocks exit C on every sorter registered
+        // under this target (normally exactly one — the screen-2 sorter).
+        public static void UnlockExitC(UnlockTarget target)
+        {
+            if (_exitCRefs.TryGetValue(target, out var list))
+                for (int i = 0; i < list.Count; i++)
+                    if (list[i] != null) list[i]._exitCUnlocked = true;
+        }
 
         private class Pending
         {
@@ -89,6 +136,30 @@ namespace CraneMachine
         {
             if (entry == null) entry = GetComponent<Collider2D>();
             _enabled = startEnabled;
+
+            // Opt this machine into exit-C unlocking under its chosen target, so the matching
+            // upgrade can unlock its third exit specifically.
+            if (hasThirdExit && exitCStartsLocked)
+                RegisterExitC(exitCUnlockTarget, this);
+        }
+
+        private void OnDestroy()
+        {
+            if (_exitCRefs.TryGetValue(exitCUnlockTarget, out var list))
+            {
+                list.Remove(this);
+                if (list.Count == 0) _exitCRefs.Remove(exitCUnlockTarget);
+            }
+        }
+
+        private static void RegisterExitC(UnlockTarget target, SortingMachine m)
+        {
+            if (!_exitCRefs.TryGetValue(target, out var list))
+            {
+                list = new List<SortingMachine>();
+                _exitCRefs[target] = list;
+            }
+            if (!list.Contains(m)) list.Add(m);
         }
 
         // ---- IFuelConsumer ----
@@ -216,8 +287,10 @@ namespace CraneMachine
         {
             _known.Remove(item);
 
-            var exit = config.Decide(item.type != null ? item.type.GetType() : null, fuel);
-            var point = exit == SortExit.B ? exitB : exitA;
+            var exit = config.Decide(item.type != null ? item.type.GetType() : null, fuel, ExitCUnlocked);
+            var point = exit == SortExit.C ? exitC
+                      : exit == SortExit.B ? exitB
+                      : exitA;
             if (point == null) point = transform;
 
             item.transform.position = point.position;
@@ -239,7 +312,9 @@ namespace CraneMachine
 
         private Vector2 EjectDirection(SortExit exit, Transform point)
         {
-            Vector2 local = exit == SortExit.B ? ejectDirB : ejectDirA;
+            Vector2 local = exit == SortExit.C ? ejectDirC
+                          : exit == SortExit.B ? ejectDirB
+                          : ejectDirA;
 
             if (local.sqrMagnitude < 0.0001f)
                 return point != null ? (Vector2)point.right : Vector2.right;
@@ -259,6 +334,7 @@ namespace CraneMachine
         {
             DrawExitGizmo(exitA, SortExit.A, Color.green);
             DrawExitGizmo(exitB, SortExit.B, Color.cyan);
+            if (hasThirdExit) DrawExitGizmo(exitC, SortExit.C, Color.yellow);
         }
 
         private void DrawExitGizmo(Transform point, SortExit exit, Color color)

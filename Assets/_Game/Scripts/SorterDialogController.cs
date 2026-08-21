@@ -19,6 +19,9 @@ namespace CraneMachine
         [Header("Lists")]
         [SerializeField] private SorterDialogDropZone holeAZone;
         [SerializeField] private SorterDialogDropZone holeBZone;
+        [Tooltip("The third-exit column. Its GameObject is shown only when the machine's exit " +
+                 "C is unlocked; leave unassigned on two-exit sorters.")]
+        [SerializeField] private SorterDialogDropZone holeCZone;
         [SerializeField] private SorterDialogIcon iconPrefab;
 
         [Tooltip("Source of item types to list. Falls back to the spawner's database.")]
@@ -73,6 +76,10 @@ namespace CraneMachine
             ClearIcons();
             if (iconPrefab == null || machine == null || holeAZone == null || holeBZone == null) return;
 
+            // The third column only exists in the UI when this machine's exit C is unlocked.
+            bool showC = holeCZone != null && machine.ExitCUnlocked;
+            if (holeCZone != null) holeCZone.gameObject.SetActive(showC);
+
             var db = ResolveDatabase();
             if (db == null) return;
 
@@ -85,7 +92,15 @@ namespace CraneMachine
 
                 var type = item.type;
                 var exit = machine.Config.ExitFor(type.GetType());
-                var zone = exit == SortExit.B ? holeBZone : holeAZone;
+
+                // A type routed to C while C is hidden falls back to the A column visually
+                // (its rule is left intact; SortingConfig.Decide also guards against routing
+                // to a locked C at runtime).
+                if (exit == SortExit.C && !showC) exit = SortExit.A;
+
+                var zone = exit == SortExit.C ? holeCZone
+                         : exit == SortExit.B ? holeBZone
+                         : holeAZone;
 
                 var icon = Instantiate(iconPrefab, zone.ListParent);
                 icon.Bind(type, SpriteOf(prefab));

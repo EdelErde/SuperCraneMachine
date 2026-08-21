@@ -13,19 +13,22 @@ namespace CraneMachine
     [RequireComponent(typeof(Collider2D))]
     public class FuelFunnel : MonoBehaviour
     {
-        [Tooltip("Base fuel one Fuel item is worth when funneled in, BEFORE the FuelPerEgg " +
-                 "stat multiplier. Kept low so the early economy is weak; the 'Richer Eggs' " +
-                 "upgrades scale it up over the run.")]
-        [SerializeField] private float fuelPerItem = 2f;
+        // Base fuel one Fuel item is worth BEFORE the FuelPerEgg multiplier. This is a
+        // constant, NOT a [SerializeField], on purpose: when it was serialized, an old value
+        // saved on the FuelFunnel component in the scene (e.g. a leftover 5) would silently
+        // override the script and produce "5-6 fuel per egg" no matter what the script said.
+        // Making it a const means the yield is always exactly this × FuelPerEgg, and the ONLY
+        // way to scale fuel is the FuelPerEgg stat (via the Richer Eggs upgrades) — which is
+        // the intended progression lever. Start: 1 × 1.0 = one droplet per egg.
+        private const float BaseFuelPerItem = 1f;
 
-        // Live yield = base × FuelPerEgg stat. FuelPerEgg starts below 1 (see StatService)
-        // so early fuel items are worth well under the old flat 5, then the Richer Eggs /
-        // Enriched Eggs upgrades push the multiplier up as the player progresses. Floored
-        // so a mis-set stat can't zero out production.
+        // Live yield = base × FuelPerEgg stat. FuelPerEgg starts at 1.0 (see StatService) so
+        // early fuel items are worth exactly one droplet, then the Richer Eggs / Enriched
+        // Eggs upgrades push the multiplier up. Floored so a mis-set stat can't zero output.
         private float FuelPerItem =>
             ServiceLocator.StatService != null
-                ? fuelPerItem * Mathf.Max(0.05f, ServiceLocator.StatService.GameValue(GameStat.FuelPerEgg))
-                : fuelPerItem;
+                ? BaseFuelPerItem * Mathf.Max(0.05f, ServiceLocator.StatService.GameValue(GameStat.FuelPerEgg))
+                : BaseFuelPerItem;
 
         [Tooltip("Layers that items live on (leave as Everything if unsure).")]
         [SerializeField] private LayerMask itemLayers = ~0;

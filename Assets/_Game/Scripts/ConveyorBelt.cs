@@ -27,8 +27,10 @@ namespace CraneMachine
         [SerializeField] private MachineRumble rumble;
 
         [Header("Fuel")]
-        [Tooltip("Base fuel drained per second while items are on the belt. 0 = free (legacy).")]
-        [SerializeField] private float fuelPerSecond = 0.25f;
+        // Base fuel drained per second while items are on the belt. Code-defined constant,
+        // NOT a [SerializeField]: a stale scene value used to silently override the script and
+        // break fuel balance. Rebalance by editing this line. (0 = free.)
+        private const float fuelPerSecond = 0.25f;
         [Tooltip("If true and out of fuel, the belt stops moving items.")]
         [SerializeField] private bool requiresFuel = true;
         [Tooltip("Name shown for this belt in the production/fuel view.")]

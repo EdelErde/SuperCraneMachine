@@ -12,8 +12,53 @@ namespace CraneMachine
     public class UnlockDroneFabUpgrade : ActivateObjectUpgrade
     {
         protected override string Name => "Drone Fab";
-        protected override int BaseCost => 2400;
+        protected override int BaseCost => 5760;         // rebalanced: drone-tier gate x2.4
         protected override UnlockTarget Target => UnlockTarget.DroneFab;
+    }
+
+    #endregion
+
+    #region Drone carry unlocks (which item types drones may haul)
+
+    // Flips a single item type's DroneCarry stat on, so drones are allowed to pick it up.
+    // Mirrors UnlockItemUpgrade<T> (which flips ItemStat.Unlocked) exactly — same one-shot
+    // shape, just a different stat. Fuel is carryable from the start (Fuel.StartsDroneCarryable
+    // == true) so it needs no unlock here; every other haulable type gets one of these.
+    public abstract class UnlockDroneCarryUpgrade<T> : Upgrade where T : ItemType
+    {
+        protected override int MaxPurchases => 1;
+        protected override void ApplyEffect() =>
+            Item<T>(ItemStat.DroneCarry).AddModifier(new StatModifier(1f, StatModifierEffect.Add));
+    }
+
+    public class DroneCarryEggUpgrade : UnlockDroneCarryUpgrade<Egg>
+    {
+        protected override string Name => "Drone Hauling: Eggs";
+        protected override int BaseCost => 1680;        // rebalanced: drone-tier x2.4
+    }
+
+    public class DroneCarryBananaUpgrade : UnlockDroneCarryUpgrade<Banana>
+    {
+        protected override string Name => "Drone Hauling: Bananas";
+        protected override int BaseCost => 2640;        // rebalanced: drone-tier x2.4
+    }
+
+    public class DroneCarryTinCanUpgrade : UnlockDroneCarryUpgrade<TinCan>
+    {
+        protected override string Name => "Drone Hauling: Tin Cans";
+        protected override int BaseCost => 3840;        // rebalanced: drone-tier x2.4
+    }
+
+    public class DroneCarryTeddyUpgrade : UnlockDroneCarryUpgrade<TeddyBear>
+    {
+        protected override string Name => "Drone Hauling: Teddy Bears";
+        protected override int BaseCost => 5280;        // rebalanced: drone-tier x2.4
+    }
+
+    public class DroneCarryDiamondUpgrade : UnlockDroneCarryUpgrade<Diamond>
+    {
+        protected override string Name => "Drone Hauling: Diamonds";
+        protected override int BaseCost => 7680;        // rebalanced: drone-tier x2.4
     }
 
     #endregion
@@ -25,7 +70,7 @@ namespace CraneMachine
     public class DroneProductionTimeUpgrade : Upgrade
     {
         protected override string Name => "Faster Fab";
-        protected override int BaseCost => 500;
+        protected override int BaseCost => 1200;         // rebalanced: drone-tier x2.4
         protected override float CostMultiplier => 1.6f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
@@ -36,7 +81,7 @@ namespace CraneMachine
     public class DroneChargesUpgrade : Upgrade
     {
         protected override string Name => "Drone Endurance";
-        protected override int BaseCost => 650;
+        protected override int BaseCost => 1560;         // rebalanced: drone-tier x2.4
         protected override float CostMultiplier => 1.7f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
@@ -47,7 +92,7 @@ namespace CraneMachine
     public class DroneSpeedUpgrade : Upgrade
     {
         protected override string Name => "Faster Drones";
-        protected override int BaseCost => 420;
+        protected override int BaseCost => 1010;         // rebalanced: drone-tier x2.4
         protected override float CostMultiplier => 1.55f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
@@ -58,7 +103,7 @@ namespace CraneMachine
     public class DroneCarrySpeedUpgrade : Upgrade
     {
         protected override string Name => "Stronger Rotors";
-        protected override int BaseCost => 480;
+        protected override int BaseCost => 1150;         // rebalanced: drone-tier x2.4
         protected override float CostMultiplier => 1.6f;
         protected override int MaxPurchases => 6;
         protected override void ApplyEffect() =>
@@ -69,14 +114,14 @@ namespace CraneMachine
 
     #region Fuel economy (relational — extend existing Fuel stats for the drone era)
 
-    // The starting fuel economy is deliberately sluggish (FuelPerEgg base lowered to 0.5,
-    // FuelConvertRate to 1/60). "Richer Eggs" climbs out of that; this is a SECOND, later
-    // tier for when a drone-fed factory needs far more fuel throughput. Same stat as
+    // The starting fuel economy is exactly one droplet per egg (FuelPerEgg base 1.0 ×
+    // FuelFunnel base 1). "Richer Eggs" (+0.5/lvl) climbs from there; this is a SECOND,
+    // later tier for when a drone-fed factory needs far more fuel throughput. Same stat as
     // FuelPerEggUpgrade, so it's fully live — it just stacks bigger, gated behind the fab.
     public class RicherEggsIIUpgrade : Upgrade
     {
         protected override string Name => "Enriched Eggs";
-        protected override int BaseCost => 1400;
+        protected override int BaseCost => 3360;         // rebalanced: drone-tier x2.4
         protected override float CostMultiplier => 1.7f;
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect() =>
@@ -90,7 +135,7 @@ namespace CraneMachine
     public class FuelReserveUpgrade : Upgrade
     {
         protected override string Name => "Fuel Reserves";
-        protected override int BaseCost => 900;
+        protected override int BaseCost => 2160;         // rebalanced: drone-tier x2.4
         protected override float CostMultiplier => 1.65f;
         protected override int MaxPurchases => 5;
         protected override void ApplyEffect()

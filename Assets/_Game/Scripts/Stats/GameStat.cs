@@ -49,5 +49,7 @@ namespace CraneMachine
         Mass,
         Unlocked,   // >0 = appears in the spawn pool
         Weight,     // spawn weight; higher = more common
+        DroneCarry, // >0 = drones are allowed to pick this type up and carry it. Gated by
+                    // upgrades so drone hauling unlocks one item type at a time (Fuel first).
     }
 }

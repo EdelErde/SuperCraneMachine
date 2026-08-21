@@ -1799,7 +1799,7 @@ Transform:
   m_GameObject: {fileID: 138394857}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -15.47, y: 0.982, z: 0}
+  m_LocalPosition: {x: -15.47, y: 1.123, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1844,12 +1844,12 @@ BoxCollider2D:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
     oldSize: {x: 1.0666667, y: 1.0666667}
-    newSize: {x: 1, y: 0.71415424}
+    newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 2
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1, y: 0.7141542}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!212 &138394860
 SpriteRenderer:
@@ -1905,7 +1905,7 @@ SpriteRenderer:
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 2
-  m_Size: {x: 1, y: 0.71415424}
+  m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -4836,7 +4836,7 @@ MonoBehaviour:
   ejectForce: 3
   ejectDir: {x: 0, y: -1}
   emitLiquidDroplets: 1
-  dropletsPerProduce: 6
+  dropletsPerProduce: 1
   dropletSpread: 0.15
   dropletVelocityJitter: 0.5
   rumble: {fileID: 402697269}
@@ -4876,7 +4876,7 @@ Transform:
   m_GameObject: {fileID: 404789912}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0.00085171894, w: 0.9999997}
-  m_LocalPosition: {x: -7.39, y: -7.11, z: 0}
+  m_LocalPosition: {x: -7.39, y: -6.49, z: 0}
   m_LocalScale: {x: 3.33, y: 0.93, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4938,7 +4938,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1, y: 0.3}
   m_EdgeRadius: 0
 --- !u!114 &404789916
 MonoBehaviour:
@@ -8427,6 +8427,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CraneMachine.DroneFab
   accepts:
     rid: 6094897981914087516
+  screen: 0
   dronePrefab: {fileID: 4883593794357335027, guid: 84b5f0653535a15419bb8f36ea507d07, type: 3}
   config:
     routes:

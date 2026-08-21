@@ -59,12 +59,14 @@ namespace CraneMachine
         [Header("Work")]
         [Tooltip("How close (world units) the drone must get to a loose item before it grips it.")]
         [SerializeField] private float grabRadius = 0.35f;
-        [Tooltip("How far the drone will look for assigned loose items to pick up.")]
-        [SerializeField] private float searchRadius = 8f;
-        [Tooltip("Layers loose items live on (leave Everything if unsure).")]
+        [Tooltip("Layers loose items live on (leave Everything if unsure). Used to scan the " +
+                 "drone's assigned screen area for items.")]
         [SerializeField] private LayerMask itemLayers = ~0;
         [Tooltip("Vertical offset of the carried item below the drone (world units).")]
         [SerializeField] private float carryDrop = 0.35f;
+        [Tooltip("Safety cap on how many colliders one screen scan can return. Raise only if " +
+                 "a screen can hold a truly huge number of loose items at once.")]
+        [SerializeField] private int maxScanHits = 128;
 
         [Header("Tug-of-war (stealing)")]
         [Tooltip("How hard the carried item pulls back on the drone. 0 = drone unaffected " +
@@ -73,9 +75,20 @@ namespace CraneMachine
         [Tooltip("Seconds the drone keeps trying to hold an item that's being pulled away " +
                  "before it gives up (the 'brief tug' window).")]
         [SerializeField] private float tugGiveUpTime = 0.35f;
-        [Tooltip("If the carried item drifts further than this from the drone's carry point, " +
-                 "treat it as stolen and let go.")]
-        [SerializeField] private float snapDistance = 1.1f;
+        [Tooltip("HARD outer cutoff: if the carried item ends up further than this from the " +
+                 "drone body itself, drop it instantly (no tug window). Safety net for the " +
+                 "item being flung far — keep it a bit LARGER than the item's Drone Carry " +
+                 "Leash, which is the normal, softer 'it's being pulled away' trigger.")]
+        [SerializeField] private float snapDistance = 3f;
+
+        [Header("Collision (walls)")]
+        [Tooltip("Layers the drone should physically bump into instead of flying through " +
+                 "(walls, machine bodies, the ceiling). Loose items should NOT be on these " +
+                 "layers. If left empty the drone falls back to 'everything except itemLayers'.")]
+        [SerializeField] private LayerMask wallLayers = 0;
+        [Tooltip("Radius of the body collider the drone creates for itself at runtime if it " +
+                 "has no Collider2D. Roughly the drone sprite's half-width in world units.")]
+        [SerializeField] private float bodyRadius = 0.25f;
 
         [Header("Feedback (optional)")]
         [SerializeField] private MachineRumble bodyRumble;
@@ -104,11 +117,13 @@ namespace CraneMachine
         private float _tugTimer;
         private float _dieTimer;
         private Vector2 _homeIdle;           // a point near the fab to loiter at when idle
+        private ScreenId _screen;            // which screen this drone searches for items on
 
-        private readonly Collider2D[] _hits = new Collider2D[32];
+        private Collider2D[] _hits;
 
         public State CurrentState => _state;
         public int ChargesLeft => _chargesLeft;
+        public ScreenId Screen => _screen;
         public bool IsBusy => _state == State.Seeking || state == StateAliasCarrying();
 
         // tiny helper to keep the expression above readable without a second enum compare typo
@@ -116,20 +131,50 @@ namespace CraneMachine
         private State state => _state;
 
         // Called by the fab right after Instantiate.
-        public void Init(DroneFab owner, int charges, Vector2 idlePoint)
+        public void Init(DroneFab owner, int charges, Vector2 idlePoint, ScreenId screen)
         {
             fab = owner;
+            _screen = screen;
             _chargesLeft = Mathf.Max(1, charges);
             _homeIdle = idlePoint;
         }
+
+        // Reassign this drone to a different screen at runtime. If it's mid-carry, it still
+        // finishes delivering its current item; the new screen only changes where it looks
+        // for the NEXT item. (Hook this up to whatever UI you add for moving drones around.)
+        public void AssignScreen(ScreenId screen) => _screen = screen;
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
             _rb.gravityScale = 0f;          // helicopters hover; no gravity
+
+            // Make the body actually collide with walls. A dynamic Rigidbody2D with no
+            // collider passes through everything, which is why the drone tunnelled through
+            // walls. We ensure a (non-trigger) collider exists and set the body up to push
+            // out of solids cleanly. Continuous detection stops fast drones from tunnelling
+            // thin walls; freezeRotation keeps the sprite upright when it bumps something.
+            _rb.bodyType = RigidbodyType2D.Dynamic;
+            _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            _rb.freezeRotation = true;
+
+            var col = GetComponent<Collider2D>();
+            if (col == null)
+            {
+                var circle = gameObject.AddComponent<CircleCollider2D>();
+                circle.radius = Mathf.Max(0.01f, bodyRadius);
+                col = circle;
+            }
+            col.isTrigger = false;          // solid, so physics resolves wall overlaps
+
             _bobPhase = Random.value * 100f;
             if (_homeIdle.sqrMagnitude < 0.0001f) _homeIdle = _rb.position;
         }
+
+        // The layer mask treated as "solid" for steering + collision reasoning. Prefer the
+        // explicit wallLayers; if it's empty, fall back to "everything the items aren't on."
+        private int SolidMask => wallLayers.value != 0 ? wallLayers.value : ~itemLayers.value;
 
         private void FixedUpdate()
         {
@@ -186,36 +231,55 @@ namespace CraneMachine
             // Lost the item (destroyed, consumed, or stolen and already gone).
             if (_carried == null) { OnLostItem(); return; }
 
-            Vector2 carryPoint = _rb.position + Vector2.up * -carryDrop; // just below the drone
-
-            // Detect a steal: the player has grabbed the item, so its drag target is no
-            // longer the point WE set. We can't read their target directly, but we CAN
-            // see the item drifting away from our carry point (they're pulling it), and
-            // we can see it's still being dragged. If it drifts past snapDistance, or the
-            // tug window elapses while it's clearly fighting us, we let go.
-            float drift = Vector2.Distance(_carried.Transform.position, carryPoint);
-
-            bool beingFought = drift > grabRadius * 1.5f;
-            if (beingFought) _tugTimer += Time.fixedDeltaTime;
-            else _tugTimer = 0f;
-
-            if (drift > snapDistance || _tugTimer >= tugGiveUpTime)
+            // STEAL DETECTION. When the player grabs the item, Item.OnDragBegin clears its
+            // drone-carry flag and the hand takes over — so from our side the tell is simply
+            // "the item is no longer in drone-carry under us." We detect that as: it stopped
+            // being dragged at all (slipped), OR it's trailing further than its own carry
+            // leash (someone is pulling it away). Either way we let go. This replaces the old
+            // pixel-fragile drift math that mis-fired at small on-screen scale.
+            // Hard cutoff: if the item is ever this far from the drone itself, drop it
+            // instantly (no tug window) — a safety net for the item getting flung far.
+            float hardDist = Vector2.Distance(_carried.Transform.position, _rb.position);
+            if (hardDist > snapDistance)
             {
-                // TUG-OF-WAR payoff: before releasing, the item yanks the drone toward it
-                // (equal-and-opposite), so the drone visibly lurches after the stolen item.
-                Vector2 pull = ((Vector2)_carried.Transform.position - _rb.position);
-                _rb.AddForce(pull * tugFactor, ForceMode2D.Impulse);
+                Vector2 yank = ((Vector2)_carried.Transform.position - _rb.position);
+                _rb.AddForce(yank * tugFactor, ForceMode2D.Impulse);
                 ReleaseCarried(stolen: true);
                 return;
             }
 
-            // Keep telling the item to follow our carry point (this IS the hand's drag).
+            bool stolenOrSlipped =
+                !_carried.IsDragging ||
+                _carried.DragError > _carried.DroneCarryLeash;
+
+            if (stolenOrSlipped)
+            {
+                _tugTimer += Time.fixedDeltaTime;
+                // Brief tug window: give the player a moment where the drone lurches after
+                // the item before it fully lets go — the "juicy" tug-of-war.
+                Vector2 pull = ((Vector2)_carried.Transform.position - _rb.position);
+                _rb.AddForce(pull * tugFactor, ForceMode2D.Impulse);
+
+                if (_tugTimer >= tugGiveUpTime || !_carried.IsDragging)
+                {
+                    ReleaseCarried(stolen: true);
+                    return;
+                }
+            }
+            else
+            {
+                _tugTimer = 0f;
+            }
+
+            // Drive the carry point to just below the drone. The item's own drone-carry
+            // physics pull it there firmly; we do NOT add an opposing force to ourselves
+            // here (that was the drone "struggling with" its own cargo). A light weigh-down
+            // is applied instead, scaled small so it reads as heft without stalling flight.
+            Vector2 carryPoint = _rb.position + Vector2.up * -carryDrop;
             _carried.OnDrag(carryPoint);
 
-            // The item pulls back on us continuously while carried — this is what makes
-            // the whole rig feel connected and lets a heavy item weigh the drone down.
-            Vector2 tug = ((Vector2)_carried.Transform.position - carryPoint) * tugFactor;
-            _rb.AddForce(tug);
+            Vector2 lag = ((Vector2)_carried.Transform.position - carryPoint);
+            _rb.AddForce(lag * (tugFactor * 0.25f));   // gentle heft, not a fight
 
             // Fly toward the destination's drop point.
             if (_target == null) { ReleaseCarried(stolen: false); return; }
@@ -302,9 +366,8 @@ namespace CraneMachine
             float look = 0.8f;
             Vector2 result = Vector2.zero;
 
-            // Only avoid things NOT on the item layer (walls/geometry). We reuse the item
-            // mask by inverting it: anything the drone shouldn't fly through is "solid".
-            int solidMask = ~itemLayers.value;
+            // Steer away from solid geometry (walls/machine bodies), not loose items.
+            int solidMask = SolidMask;
 
             Vector2[] whiskers =
             {
@@ -342,8 +405,10 @@ namespace CraneMachine
             _seekTarget = null;
             _tugTimer = 0f;
 
-            // Carry it the hand's way: begin a drag at the item's current position.
-            item.OnDragBegin(item.Transform.position);
+            // Carry it with the drone-specific grip: firm tracking, no silent slip, but still
+            // steal-able by the player. (NOT the plain hand OnDragBegin — that used the hand's
+            // slip leash, which a moving drone trips instantly, dropping the item mid-air.)
+            item.BeginDroneCarry(item.Transform.position);
             _state = State.Carrying;
         }
 
@@ -383,11 +448,19 @@ namespace CraneMachine
         }
 
         // ---------------------------------------------------------------- SEARCH
-        // Find the nearest loose item whose type is routed AND that isn't already held by
-        // the player or blocked, within searchRadius.
+        // Find the nearest loose item, ON THIS DRONE'S SCREEN, whose type is routed and
+        // carry-unlocked and that isn't already held. No search radius: the drone considers
+        // every item within its assigned screen's area (ScreenArea), however far. "Nearest"
+        // only breaks ties between otherwise-equal candidates so it grabs sensibly.
         private Item FindAssignedLooseItem()
         {
             if (fab == null) return null;
+
+            var area = ScreenArea.For(_screen);
+            if (area == null) return null;   // no ScreenArea authored for this screen yet
+
+            if (_hits == null || _hits.Length != Mathf.Max(8, maxScanHits))
+                _hits = new Collider2D[Mathf.Max(8, maxScanHits)];
 
             var filter = new ContactFilter2D
             {
@@ -396,7 +469,8 @@ namespace CraneMachine
                 useTriggers = false,
             };
 
-            int count = Physics2D.OverlapCircle(_rb.position, searchRadius, filter, _hits);
+            Bounds b = area.Bounds;
+            int count = Physics2D.OverlapBox(b.center, b.size, 0f, filter, _hits);
 
             Item best = null;
             float bestSqr = float.MaxValue;
@@ -406,6 +480,10 @@ namespace CraneMachine
                 if (_hits[i] == null) continue;
                 var item = _hits[i].GetComponentInParent<Item>();
                 if (item == null || !CanTake(item)) continue;
+
+                // Definitive membership test — the OverlapBox is a broad-phase filter; this
+                // confirms the item's actual position is inside the screen rectangle.
+                if (!area.Contains(item.Transform.position)) continue;
 
                 float sqr = ((Vector2)item.Transform.position - _rb.position).sqrMagnitude;
                 if (sqr < bestSqr) { bestSqr = sqr; best = item; }
@@ -422,13 +500,31 @@ namespace CraneMachine
             if (item == null || item.type == null) return false;
             if (item.IsDragging) return false;                       // someone's holding it
             if (fab == null || !fab.Config.IsRouted(item.type.GetType())) return false;
+
+            // Carry gating: drones may only haul item types whose DroneCarry stat is unlocked
+            // (Fuel is on by default; others via UnlockDroneCarryUpgrade). An assigned-but-
+            // locked type is simply ignored until its hauling upgrade is bought.
+            if (ServiceLocator.StatService != null &&
+                !ServiceLocator.StatService.DroneCanCarry(item.type.GetType()))
+                return false;
+
             return true;
         }
 
         private void OnDrawGizmosSelected()
         {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(transform.position, searchRadius);
+            // Show the drone's working area (its screen) if available at runtime, plus the
+            // grip radius. No search radius any more — the whole screen is in range.
+            if (Application.isPlaying)
+            {
+                var area = ScreenArea.For(_screen);
+                if (area != null)
+                {
+                    Bounds b = area.Bounds;
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawWireCube(b.center, b.size);
+                }
+            }
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position, grabRadius);
         }

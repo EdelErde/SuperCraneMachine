@@ -20,8 +20,11 @@ namespace CraneMachine
         [SerializeField] private float falloff = 0f;
 
         [Header("Fuel")]
-        [Tooltip("Base fuel units drained per second while blowing (before efficiency).")]
-        [SerializeField] private float fuelPerSecond = 0.8f;
+        // Base fuel units drained per second while blowing (before efficiency). Code-defined
+        // constant, NOT a [SerializeField]: a stale value saved on the LeafBlower component in
+        // the scene used to silently override the script and break fuel balance. Rebalance by
+        // editing this line; the FuelEfficiency stat still scales it live via upgrades.
+        private const float fuelPerSecond = 0.8f;
         [Tooltip("Name shown for this blower in the production/fuel view.")]
         [SerializeField] private string fuelLabel = "Leaf Blower";
 
