@@ -34,6 +34,13 @@ namespace CraneMachine
         // Fuel filter (item -> Fuel item)
         FuelFilterProcessTime, // seconds a queued item takes to become a Fuel item (lower = faster)
         FuelFilterCapacity,    // how many items the filter can buffer/process at once
+
+        // Drone fab / drones
+        DroneProductionTime, // seconds to build one drone (lower = faster; DroneFab floors it at 0.1)
+        DroneCharges,        // deliveries a fresh drone makes before it dies
+        DroneSpeed,          // empty-travel speed multiplier (1 = base)
+        DroneCarrySpeed,     // carrying speed multiplier (usually < DroneSpeed)
+        DroneGrip,           // reserved: how hard a drone resists having items stolen (unused for now)
     }
 
     public enum ItemStat

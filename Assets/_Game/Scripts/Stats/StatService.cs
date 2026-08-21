@@ -63,8 +63,11 @@ namespace CraneMachine
             _game.RegisterStat(GameStat.ConveyorGrip, 12f);
 
             _game.RegisterStat(GameStat.Fuel, 0f);
-            _game.RegisterStat(GameStat.FuelPerEgg, 1f);
-            _game.RegisterStat(GameStat.FuelConvertRate, 1f / 30f);
+            // Live multiplier on FuelFunnel yield (base 2 × this). Starts weak (0.6 → ~1.2
+            // fuel per item vs the old flat 5) so early fuel is scarce; the Richer Eggs /
+            // Enriched Eggs upgrades raise it over the run.
+            _game.RegisterStat(GameStat.FuelPerEgg, 0.6f);
+            _game.RegisterStat(GameStat.FuelConvertRate, 1f / 30f); // unused by current pipeline; left at original
 
             // Leaf blower
             _game.RegisterStat(GameStat.BlowPower, 6f);
@@ -77,6 +80,13 @@ namespace CraneMachine
             // Fuel filter
             _game.RegisterStat(GameStat.FuelFilterProcessTime, 1.5f);
             _game.RegisterStat(GameStat.FuelFilterCapacity, 4f);
+
+            // Drone fab
+            _game.RegisterStat(GameStat.DroneProductionTime, 4f);
+            _game.RegisterStat(GameStat.DroneCharges, 5f);
+            _game.RegisterStat(GameStat.DroneSpeed, 1f);
+            _game.RegisterStat(GameStat.DroneCarrySpeed, 0.8f);
+            _game.RegisterStat(GameStat.DroneGrip, 1f);
         }
 
         private void RegisterItemStats()

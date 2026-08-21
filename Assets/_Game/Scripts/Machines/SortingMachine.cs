@@ -38,7 +38,7 @@ namespace CraneMachine
 
         [Header("Fuel")]
         [Tooltip("Base fuel drained per second while the machine holds any items.")]
-        [SerializeField] private float fuelPerSecond = 0.3f;
+        [SerializeField] private float fuelPerSecond = 0.5f;
         [Tooltip("Name shown for this machine in the production/fuel view.")]
         [SerializeField] private string fuelLabel = "Sorting Machine";
 

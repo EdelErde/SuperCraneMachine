@@ -13,8 +13,19 @@ namespace CraneMachine
     [RequireComponent(typeof(Collider2D))]
     public class FuelFunnel : MonoBehaviour
     {
-        [Tooltip("How much fuel one Fuel item is worth when funneled in.")]
-        [SerializeField] private float fuelPerItem = 5f;
+        [Tooltip("Base fuel one Fuel item is worth when funneled in, BEFORE the FuelPerEgg " +
+                 "stat multiplier. Kept low so the early economy is weak; the 'Richer Eggs' " +
+                 "upgrades scale it up over the run.")]
+        [SerializeField] private float fuelPerItem = 2f;
+
+        // Live yield = base × FuelPerEgg stat. FuelPerEgg starts below 1 (see StatService)
+        // so early fuel items are worth well under the old flat 5, then the Richer Eggs /
+        // Enriched Eggs upgrades push the multiplier up as the player progresses. Floored
+        // so a mis-set stat can't zero out production.
+        private float FuelPerItem =>
+            ServiceLocator.StatService != null
+                ? fuelPerItem * Mathf.Max(0.05f, ServiceLocator.StatService.GameValue(GameStat.FuelPerEgg))
+                : fuelPerItem;
 
         [Tooltip("Layers that items live on (leave as Everything if unsure).")]
         [SerializeField] private LayerMask itemLayers = ~0;
@@ -65,7 +76,7 @@ namespace CraneMachine
         private void Consume(Item item)
         {
             if (ServiceLocator.FuelService != null)
-                ServiceLocator.FuelService.Add(fuelPerItem);
+                ServiceLocator.FuelService.Add(FuelPerItem);
 
             OnFunneled?.Invoke();
 

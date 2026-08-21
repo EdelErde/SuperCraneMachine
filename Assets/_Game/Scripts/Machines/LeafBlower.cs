@@ -21,7 +21,7 @@ namespace CraneMachine
 
         [Header("Fuel")]
         [Tooltip("Base fuel units drained per second while blowing (before efficiency).")]
-        [SerializeField] private float fuelPerSecond = 0.5f;
+        [SerializeField] private float fuelPerSecond = 0.8f;
         [Tooltip("Name shown for this blower in the production/fuel view.")]
         [SerializeField] private string fuelLabel = "Leaf Blower";
 

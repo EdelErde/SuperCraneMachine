@@ -8,6 +8,7 @@ namespace CraneMachine
         ResourceHole,
         LeafBlower,
         SortingMachine,
+        DroneFab,
         WinScreen,
     }
 }
